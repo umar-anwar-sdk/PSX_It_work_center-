@@ -1,8 +1,14 @@
-import pdfplumber
-import re
+import hashlib
 import logging
+import re
 from datetime import datetime
+from decimal import Decimal
 from pathlib import Path
+
+import pdfplumber
+from django.utils import timezone
+
+from .models import ExtractedCompanyRecord
 
 logger = logging.getLogger(__name__)
 
@@ -11,249 +17,224 @@ def clean_text(text):
     if not text:
         return ""
 
-    text = re.sub(r'\n+', ' ', text)
-    text = re.sub(r'\s+', ' ', text)
-
+    text = re.sub(r"\n+", " ", text)
+    text = re.sub(r"\s+", " ", text)
     return text.strip()
-    
 
 
-# ---------------- DATE & TIME ----------------
+def extract_pdf_text(pdf_path):
+    if hasattr(pdf_path, "path"):
+        pdf_path = pdf_path.path
+
+    if not pdf_path:
+        logger.error("No PDF path was provided to extract_pdf_text.")
+        return ""
+
+    logger.info("Starting PDF text extraction for: %s", pdf_path)
+    text_parts = []
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            for page_number, page in enumerate(pdf.pages, start=1):
+                extracted_text = page.extract_text() or ""
+                if extracted_text:
+                    text_parts.append(extracted_text)
+                    logger.info("Extracted page %s from PDF", page_number)
+    except Exception as exc:
+        logger.exception("PDF text extraction failed for %s", pdf_path)
+        raise
+
+    full_text = "\n".join(text_parts)
+    logger.info("PDF text extraction completed. Total characters: %s", len(full_text))
+    return full_text
+
+
 def extract_report_datetime(pdf_path):
-    try:
-        with pdfplumber.open(pdf_path) as pdf:
-            text = pdf.pages[0].extract_text() or ""
+    text = extract_pdf_text(pdf_path)
+    report_date = None
+    report_time = None
 
-        report_date = None
-        report_time = None
+    date_match = re.search(r"(\d{2}-[A-Za-z]{3}-\d{4}|\d{2}/\d{2}/\d{4}|\d{4}-\d{2}-\d{2})", text)
+    time_match = re.search(r"(\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM)?)", text, re.I)
 
-        date_pattern = r'(\d{2}-[A-Za-z]{3}-\d{4}|\d{2}/\d{2}/\d{4}|\d{4}-\d{2}-\d{2})'
-        time_pattern = r'(\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM)?)'
+    if date_match:
+        for date_format in ["%d-%b-%Y", "%d/%m/%Y", "%Y-%m-%d"]:
+            try:
+                report_date = datetime.strptime(date_match.group(1), date_format).date()
+                break
+            except ValueError:
+                continue
 
-        date_match = re.search(date_pattern, text)
-        time_match = re.search(time_pattern, text, re.I)
+    if time_match:
+        for time_format in ["%H:%M:%S", "%H:%M", "%I:%M %p"]:
+            try:
+                report_time = datetime.strptime(time_match.group(1), time_format).time()
+                break
+            except ValueError:
+                continue
 
-        if date_match:
-            for fmt in ["%d-%b-%Y", "%d/%m/%Y", "%Y-%m-%d"]:
-                try:
-                    report_date = datetime.strptime(date_match.group(1), fmt).date()
-                    break
-                except:
-                    pass
-
-        if time_match:
-            for fmt in ["%H:%M:%S", "%H:%M", "%I:%M %p"]:
-                try:
-                    report_time = datetime.strptime(time_match.group(1), fmt).time()
-                    break
-                except:
-                    pass
-
-        return report_date, report_time
-
-    except Exception as e:
-        logger.error(e)
-        return None, None
+    return report_date, report_time
 
 
-def _extract_tables_with_pdfplumber(pdf_path):
-    try:
-        all_tables = []
+def parse_pdf_text(text):
+    records = []
+    lines = [clean_text(line) for line in text.splitlines() if clean_text(line)]
 
-        with pdfplumber.open(pdf_path) as pdf:
-            for page in pdf.pages:
-                try:
-                    page_tables = page.extract_tables()
-                except Exception as e:
-                    logger.warning("pdfplumber page table extraction failed: %s", e)
-                    continue
+    for line in lines:
+        if not re.search(r"\d", line):
+            continue
 
-                for table in page_tables:
-                    cleaned_table = []
-                    for row in table:
-                        row = [clean_text(str(x)) if x else None for x in row]
+        if line.lower().startswith(("psx", "daily", "weekly", "sr#", "symbol", "name", "sector")):
+            continue
 
-                        if all(v in [None, "", " "] for v in row):
-                            continue
+        if "page" in line.lower() and "http" in line.lower():
+            continue
 
-                        if any("Symbol" in str(v) or "Name" in str(v) for v in row):
-                            continue
+        if re.match(r"^\d+\s+[A-Z]{2,}\s+", line):
+            parts = line.split()
+            if len(parts) < 7:
+                continue
 
-                        cleaned_table.append(row)
+            symbol = parts[1]
+            company_name = parts[2]
+            sector = " ".join(parts[3:-5])
+            price_text = parts[-5]
+            change_text = parts[-4]
+            change_percent_text = parts[-3]
+            volume_text = parts[-2]
+            trend = parts[-1]
 
-                    if cleaned_table:
-                        all_tables.append(cleaned_table)
+            company_name = company_name if company_name != "Unknown" else ""
+            if not company_name:
+                continue
 
-        return all_tables
-    except Exception as e:
-        logger.error("pdfplumber fallback failed: %s", e)
-        return []
+            cleaned_percent = change_percent_text.replace("%", "")
+            cleaned_volume = volume_text.replace(",", "")
+            cleaned_change = re.sub(r"[^0-9.-]", "", change_text)
+
+            try:
+                records.append(
+                    {
+                        "company_name": company_name,
+                        "symbol": symbol,
+                        "price": Decimal(price_text),
+                        "change_value": Decimal(cleaned_change),
+                        "change_percent": Decimal(cleaned_percent),
+                        "volume": int(cleaned_volume),
+                    }
+                )
+            except Exception:
+                continue
+
+    logger.info("Parsed %s company rows from PDF text", len(records))
+    return records
 
 
-def extract_table_data(pdf_path):
-    try:
-        import camelot
-    except ImportError as e:
-        logger.error("Camelot import failed: %s", e)
-        logger.warning("Falling back to pdfplumber-based table extraction.")
-        return _extract_tables_with_pdfplumber(pdf_path)
+def extract_company_information(pdf_path):
+    text = extract_pdf_text(pdf_path)
+    return parse_pdf_text(text)
 
-    try:
-        if not Path(pdf_path).exists():
-            return []
-
-        try:
-            tables = camelot.read_pdf(pdf_path, pages="all", flavor="lattice")
-            if len(tables) == 0:
-                tables = camelot.read_pdf(pdf_path, pages="all", flavor="stream")
-        except Exception as e:
-            logger.error("Camelot table extraction failed: %s", e)
-            logger.warning("Falling back to pdfplumber-based table extraction.")
-            return _extract_tables_with_pdfplumber(pdf_path)
-
-        all_tables = []
-
-        for table in tables:
-            df = table.df
-
-            cleaned_table = []
-
-            for row in df.values.tolist():
-                row = [clean_text(str(x)) if x else None for x in row]
-
-                if all(v in [None, "", " "] for v in row):
-                    continue
-
-                if any("Symbol" in str(v) or "Name" in str(v) for v in row):
-                    continue
-
-                cleaned_table.append(row)
-
-            if cleaned_table:
-                all_tables.append(cleaned_table)
-
-        return all_tables
-
-    except Exception as e:
-        logger.error(e)
-        return []
-# ---------------- MAIN SCRAPER ----------------
-def scrape_pdf(pdf_file_path):
-    try:
-        report_date, report_time = extract_report_datetime(pdf_file_path)
-        tables = extract_table_data(pdf_file_path)
-
-        return {
-            "success": True,
-            "report_date": report_date,
-            "report_time": report_time,
-            "tables": tables,
-            "error": None
-        }
-
-    except Exception as e:
-        return {
-            "success": False,
-            "report_date": None,
-            "report_time": None,
-            "tables": [],
-            "error": str(e)
-        }
-import hashlib
 
 def get_file_hash(file):
     hasher = hashlib.sha256()
-    for chunk in file.chunks():
-        hasher.update(chunk)
+    if hasattr(file, "seek"):
+        file.seek(0)
+    if hasattr(file, "chunks"):
+        for chunk in file.chunks():
+            hasher.update(chunk)
+    else:
+        hasher.update(str(file).encode("utf-8"))
+    if hasattr(file, "seek"):
+        file.seek(0)
     return hasher.hexdigest()
 
 
-def _normalize_row_key(row, table_index, row_index):
-    if not row:
-        return f"table_{table_index}_row_{row_index}"
+def save_extracted_data(pdf_document, records):
+    logger.info("Saving %s extracted records for PDF %s", len(records), pdf_document.name)
+    pdf_document.extracted_companies.all().delete()
 
-    symbol = row.get('symbol') if isinstance(row, dict) else None
-    symbol = str(symbol).strip() if symbol else None
+    for record in records:
+        ExtractedCompanyRecord.objects.create(
+            pdf_document=pdf_document,
+            company_name=record.get("company_name", ""),
+            symbol=record.get("symbol", ""),
+            price=record.get("price"),
+            change_value=record.get("change_value"),
+            change_percent=record.get("change_percent"),
+            volume=record.get("volume"),
+        )
 
-    if symbol:
-        return f"{table_index}:{symbol}"
-
-    return f"table_{table_index}_row_{row_index}"
-
-
-def _get_diff_fields(old_row, new_row):
-    diffs = {}
-    if not isinstance(old_row, dict) or not isinstance(new_row, dict):
-        return diffs
-
-    for key in sorted(set(old_row.keys()) | set(new_row.keys())):
-        old_value = old_row.get(key)
-        new_value = new_row.get(key)
-        if old_value != new_value:
-            diffs[key] = {
-                'old': old_value,
-                'new': new_value
-            }
-
-    return diffs
+    logger.info("Saved extracted data for PDF %s", pdf_document.name)
 
 
-def compare_pdf_records(base_rows, new_rows):
-    base_map = {}
-    new_map = {}
+def process_pdf_document(pdf_document):
+    logger.info("Scraping started for PDF: %s", pdf_document.name)
+    file_path = pdf_document.file.path
+    logger.info("PDF path: %s", file_path)
 
-    for row in base_rows:
-        key = _normalize_row_key(row.row_data, row.table_index, row.row_index)
-        base_map[key] = row.row_data
+    report_date, report_time = extract_report_datetime(file_path)
+    logger.info("Extracted report date/time: %s / %s", report_date, report_time)
 
-    for row in new_rows:
-        key = _normalize_row_key(row.row_data, row.table_index, row.row_index)
-        new_map[key] = row.row_data
+    records = extract_company_information(file_path)
+    logger.info("Parsed %s records", len(records))
 
-    added_changes = []
-    removed_changes = []
-    modified_changes = []
+    pdf_document.report_date = report_date
+    pdf_document.report_time = report_time
+    if not pdf_document.file_hash:
+        pdf_document.file_hash = get_file_hash(pdf_document.file)
+    pdf_document.is_processed = True
+    pdf_document.processing_error = ""
+    pdf_document.processed_at = timezone.now()
+    pdf_document.save()
+    logger.info("Saved PDF metadata for: %s", pdf_document.name)
 
-    for key, new_row_data in new_map.items():
-        if key not in base_map:
-            added_changes.append({
-                'type': 'added',
-                'key': key,
-                'symbol': new_row_data.get('symbol'),
-                'name': new_row_data.get('name'),
-                'row_data': new_row_data,
-            })
-        else:
-            diff = _get_diff_fields(base_map[key], new_row_data)
-            if diff:
-                modified_changes.append({
-                    'type': 'modified',
-                    'key': key,
-                    'symbol': new_row_data.get('symbol') or base_map[key].get('symbol'),
-                    'name': new_row_data.get('name') or base_map[key].get('name'),
-                    'diff': diff,
-                    'old_row': base_map[key],
-                    'new_row': new_row_data,
-                })
+    save_extracted_data(pdf_document, records)
+    return records
 
-    for key, old_row_data in base_map.items():
-        if key not in new_map:
-            removed_changes.append({
-                'type': 'removed',
-                'key': key,
-                'symbol': old_row_data.get('symbol'),
-                'name': old_row_data.get('name'),
-                'row_data': old_row_data,
-            })
 
-    changes = added_changes + removed_changes + modified_changes
-    summary = {
-        'total_records_changed': len(changes),
-        'new_records': len(added_changes),
-        'removed_records': len(removed_changes),
-        'updated_records': len(modified_changes),
-        'base_records': len(base_rows),
-        'new_records_total': len(new_rows),
+def scrape_pdf(pdf_file_path):
+    report_date, report_time = extract_report_datetime(pdf_file_path)
+    records = extract_company_information(pdf_file_path)
+    return {
+        "success": True,
+        "report_date": report_date,
+        "report_time": report_time,
+        "records": records,
+        "error": None,
     }
 
-    return summary, changes
+
+def get_table_data(records):
+    rows = []
+    for item in records:
+        if hasattr(item, "company_name"):
+            record = item
+            payload = {
+                "company_name": record.company_name,
+                "symbol": record.symbol,
+                "price": record.price,
+                "change_value": record.change_value,
+                "change_percent": record.change_percent,
+                "volume": record.volume,
+            }
+        else:
+            payload = item
+
+        rows.append(
+            {
+                "company_name": payload.get("company_name", ""),
+                "symbol": payload.get("symbol", ""),
+                "price": format_decimal(payload.get("price")),
+                "change_value": format_decimal(payload.get("change_value")),
+                "change_percent": format_decimal(payload.get("change_percent")),
+                "volume": payload.get("volume", ""),
+            }
+        )
+    return rows
+
+
+def format_decimal(value):
+    if value is None:
+        return ""
+    if isinstance(value, Decimal):
+        return format(value, ".2f")
+    return str(value)

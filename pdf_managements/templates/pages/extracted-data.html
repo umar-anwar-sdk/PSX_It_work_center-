@@ -4,7 +4,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PDF Management</title>
+    <title>Extracted Data</title>
     <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
   </head>
   <body>
@@ -38,69 +38,47 @@
       <div class="main-area">
         <header class="topbar">
           <div>
-            <h1>PDF Management</h1>
-            <p>Upload and process PDF reports</p>
+            <h1>Extracted Data</h1>
+            <p>{{ pdf_document.name }}</p>
           </div>
         </header>
         <main class="content">
-          {% if messages %}
-            {% for message in messages %}
-              <div class="info-block" style="margin-bottom:1rem;">{{ message }}</div>
-            {% endfor %}
-          {% endif %}
-
-          <section class="card">
-            <div class="card-header"><h2 class="card-title">Upload PDF</h2></div>
-            <form method="post" enctype="multipart/form-data">
-              {% csrf_token %}
-              <div class="upload-box">
-                <p>Choose a PDF report to upload.</p>
-                {{ form.file }}
-                <button class="button" type="submit">Upload and process</button>
-              </div>
-            </form>
-          </section>
-
           <section class="card table-card">
-            <div class="card-header"><h2 class="card-title">Upload History</h2></div>
+            <div class="card-header">
+              <h2 class="card-title">Parsed records</h2>
+              <a class="outline-button" href="{% url 'pdf-management' %}">Back to uploads</a>
+            </div>
+            {% if table_rows %}
             <table>
               <thead>
                 <tr>
-                  <th>File Name</th>
-                  <th>Uploaded On</th>
-                  <th>Report Date</th>
-                  <th>Status</th>
-                  <th>Action</th>
+                  <th>Company</th>
+                  <th>Symbol</th>
+                  <th>Price</th>
+                  <th>Change</th>
+                  <th>Change %</th>
+                  <th>Volume</th>
                 </tr>
               </thead>
               <tbody>
-                {% for pdf_document in pdf_documents %}
+                {% for row in table_rows %}
                 <tr>
-                  <td>{{ pdf_document.name }}</td>
-                  <td>{{ pdf_document.uploaded_at }}</td>
-                  <td>{{ pdf_document.report_date|default:"-" }}</td>
-                  <td>
-                    {% if pdf_document.is_processed %}
-                      <span class="badge success">Processed</span>
-                    {% else %}
-                      <span class="badge danger">Pending</span>
-                    {% endif %}
-                  </td>
-                  <td>
-                    <a class="ghost-button" href="{% url 'extracted-data' pdf_document.pk %}">View data</a>
-                  </td>
-                </tr>
-                {% empty %}
-                <tr>
-                  <td colspan="5">No PDFs uploaded yet.</td>
+                  <td>{{ row.company_name }}</td>
+                  <td>{{ row.symbol }}</td>
+                  <td>{{ row.price }}</td>
+                  <td>{{ row.change_value }}</td>
+                  <td>{{ row.change_percent }}</td>
+                  <td>{{ row.volume }}</td>
                 </tr>
                 {% endfor %}
               </tbody>
             </table>
+            {% else %}
+            <p>No extracted rows are available yet.</p>
+            {% endif %}
           </section>
         </main>
       </div>
     </div>
-    <script src="{% static 'js/main.js' %}"></script>
   </body>
 </html>

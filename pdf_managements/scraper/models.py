@@ -1,12 +1,9 @@
 from django.db import models
 
-# Create your models here.
-from django.db import models
-
 
 class PDFDocument(models.Model):
     name = models.CharField(max_length=255)
-    file = models.FileField(upload_to='pdfs/')
+    file = models.FileField(upload_to="pdfs/")
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     report_date = models.DateField(null=True, blank=True)
@@ -15,32 +12,31 @@ class PDFDocument(models.Model):
     is_processed = models.BooleanField(default=False)
     processing_error = models.TextField(null=True, blank=True)
     processed_at = models.DateTimeField(null=True, blank=True)
-    file_hash = models.CharField(max_length=64, unique=True, null=True, blank=True)
+    file_hash = models.CharField(max_length=64, null=True, blank=True)
 
     class Meta:
-        indexes = [models.Index(fields=['report_date', 'report_time'])]
+        indexes = [models.Index(fields=["report_date", "report_time"])]
 
     def __str__(self):
         return self.name
 
 
-class ParsedTableData(models.Model):
+class ExtractedCompanyRecord(models.Model):
     pdf_document = models.ForeignKey(
         PDFDocument,
         on_delete=models.CASCADE,
-        related_name='table_data'
+        related_name="extracted_companies",
     )
-
-    table_index = models.IntegerField()
-    row_index = models.IntegerField()
-
-    row_data = models.JSONField()
-
+    company_name = models.CharField(max_length=255)
+    symbol = models.CharField(max_length=50, blank=True)
+    price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    change_value = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    change_percent = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    volume = models.PositiveIntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('pdf_document', 'table_index', 'row_index')
-        ordering = ['table_index', 'row_index']
+        ordering = ["company_name"]
 
     def __str__(self):
-        return f"Table {self.table_index} Row {self.row_index}"
+        return self.company_name
