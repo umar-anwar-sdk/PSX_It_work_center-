@@ -1,0 +1,144 @@
+{%extends 'base.html' %}
+
+{% block content %}
+    <div class="main-area">
+      <header class="topbar">
+        <button class="icon-button mobile-menu" data-mobile-menu>☰</button>
+        <div>
+          <h1>Watchlist</h1>
+          <p>Track your favorite companies and investment ideas</p>
+        </div>
+        <div class="topbar-actions"><button class="button">＋ Add Stock</button><button class="outline-button">⬆
+            Import</button><button class="outline-button">⬇ Export</button></div>
+      </header>
+      <main class="content">
+        <section class="grid grid-5">
+          <article class="stat-card">
+            <div>
+              <p class="stat-label">Total Stocks</p>
+              <p class="stat-value">50</p>
+              <p class="stat-helper">No change</p>
+            </div>
+            <div class="stat-icon">📊</div>
+          </article>
+          <article class="stat-card">
+            <div>
+              <p class="stat-label">Price Up</p>
+              <p class="stat-value">28</p>
+              <p class="stat-helper">56% of total</p>
+            </div>
+            <div class="stat-icon">⬆</div>
+          </article>
+          <article class="stat-card">
+            <div>
+              <p class="stat-label">Price Down</p>
+              <p class="stat-value">19</p>
+              <p class="stat-helper">38% of total</p>
+            </div>
+            <div class="stat-icon">⬇</div>
+          </article>
+          <article class="stat-card">
+            <div>
+              <p class="stat-label">Unchanged</p>
+              <p class="stat-value">3</p>
+              <p class="stat-helper">6% of total</p>
+            </div>
+            <div class="stat-icon">➖</div>
+          </article>
+          <article class="stat-card">
+            <div>
+              <p class="stat-label">New Entries</p>
+              <p class="stat-value">6</p>
+              <p class="stat-helper">vs Yesterday: 3</p>
+            </div>
+            <div class="stat-icon">➕</div>
+          </article>
+        </section>
+        <section class="grid" style="grid-template-columns:1fr 340px;align-items:start;">
+          <section class="card table-card">
+            <div class="card-header">
+              <h2 class="card-title">My Watchlist</h2>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th>Company</th>
+                  <th>Sector</th>
+                  <th>Price</th>
+                  <th>Change %</th>
+                  <th>Volume</th>
+                  <th>Trend</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>CNERGY</strong></td>
+                  <td>Cnergyico PK Limited</td>
+                  <td>REFINERY</td>
+                  <td>9.40</td>
+                  <td class="badge success">+7.80%</td>
+                  <td>211,683,514</td>
+                  <td><span class="badge success">Up</span></td>
+                </tr>
+                <tr>
+                  <td><strong>LSECL</strong></td>
+                  <td>LSE Capital Limited</td>
+                  <td>INV. BANKS / SECURITIES</td>
+                  <td>7.84</td>
+                  <td class="badge success">+14.62%</td>
+                  <td>58,382,446</td>
+                  <td><span class="badge success">Up</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+          <div class="content" style="padding:0;gap:1rem;">
+            <article class="card">
+              <div class="card-header">
+                <h2 class="card-title">Alerts</h2>
+              </div>
+              <div class="list-stack">
+                <div class="list-item">
+                  <div><strong>LSECL</strong>
+                    <div class="rank-meta">Strong breakout detected · 2m ago</div>
+                  </div><span class="badge success">Success</span>
+                </div>
+                <div class="list-item">
+                  <div><strong>DFSM</strong>
+                    <div class="rank-meta">Heavy volume with price drop · 15m ago</div>
+                  </div><span class="badge danger">Danger</span>
+                </div>
+              </div>
+            </article>
+            <article class="card">
+              <div class="card-header">
+                <h2 class="card-title">Notes</h2><button class="ghost-button">View All</button>
+              </div>
+              <div class="list-stack">
+                <p>CNERGY: Strong momentum with high volume.</p>
+                <p>HBL: Dividend growth stock. Hold for 6M+.</p>
+                <p>FFC: Seasonal stock. Good for H2.</p><button class="outline-button" style="width:100%;">Add
+                  Note</button>
+              </div>
+            </article>
+          </div>
+        </section>
+        <section class="card chart-card">
+          <div class="card-header">
+            <h2 class="card-title">Watchlist Performance (Last 30 Days)</h2>
+          </div>
+          <div class="bar-chart">
+            <div class="bar" style="height: 45%"><span>1</span></div>
+            <div class="bar" style="height: 65%"><span>2</span></div>
+            <div class="bar" style="height: 55%"><span>3</span></div>
+            <div class="bar" style="height: 70%"><span>4</span></div>
+            <div class="bar" style="height: 90%"><span>5</span></div>
+            <div class="bar" style="height: 80%"><span>6</span></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+{% endblock %}
+ 

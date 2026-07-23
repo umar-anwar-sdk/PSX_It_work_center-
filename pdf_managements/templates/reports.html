@@ -1,0 +1,103 @@
+{%extends 'base.html' %}
+
+{% block content %}
+    <div class="main-area">
+      <header class="topbar">
+        <button class="icon-button mobile-menu" data-mobile-menu>☰</button>
+        <div>
+          <h1>Reports</h1>
+          <p>Generate and download detailed market reports</p>
+        </div>
+        <div class="topbar-actions"><button class="outline-button">09-Jul-2026</button><button class="icon-button"
+            data-theme-toggle>☀</button></div>
+      </header>
+      <main class="content">
+        <section class="card">
+          <div class="card-header">
+            <h2 class="card-title">Generate New Report</h2>
+          </div>
+          <div class="grid grid-4">
+            <div class="card" style="padding:1rem;text-align:center;box-shadow:none;background:var(--card);">
+              <div
+                style="width:48px;height:48px;border-radius:999px;background:rgba(37,99,235,.12);display:grid;place-items:center;margin:0 auto 1rem;color:var(--primary);">
+                📅</div>
+              <p style="font-weight:800;">Daily Report</p>
+              <p style="color:var(--muted-foreground);font-size:.85rem;">Performance and market analytics</p><button
+                class="outline-button">Generate</button>
+            </div>
+            <div class="card" style="padding:1rem;text-align:center;box-shadow:none;background:var(--card);">
+              <div
+                style="width:48px;height:48px;border-radius:999px;background:rgba(37,99,235,.12);display:grid;place-items:center;margin:0 auto 1rem;color:var(--primary);">
+                📅</div>
+              <p style="font-weight:800;">Weekly Report</p>
+              <p style="color:var(--muted-foreground);font-size:.85rem;">Performance and market analytics</p><button
+                class="outline-button">Generate</button>
+            </div>
+            <div class="card" style="padding:1rem;text-align:center;box-shadow:none;background:var(--card);">
+              <div
+                style="width:48px;height:48px;border-radius:999px;background:rgba(37,99,235,.12);display:grid;place-items:center;margin:0 auto 1rem;color:var(--primary);">
+                📅</div>
+              <p style="font-weight:800;">Monthly Report</p>
+              <p style="color:var(--muted-foreground);font-size:.85rem;">Performance and market analytics</p><button
+                class="outline-button">Generate</button>
+            </div>
+            <div class="card" style="padding:1rem;text-align:center;box-shadow:none;background:var(--card);">
+              <div
+                style="width:48px;height:48px;border-radius:999px;background:rgba(37,99,235,.12);display:grid;place-items:center;margin:0 auto 1rem;color:var(--primary);">
+                📊</div>
+              <p style="font-weight:800;">Quarterly Report</p>
+              <p style="color:var(--muted-foreground);font-size:.85rem;">Performance and market analytics</p><button
+                class="outline-button">Generate</button>
+            </div>
+          </div>
+        </section>
+        <section class="card table-card">
+          <div class="card-header">
+            <h2 class="card-title">Recent Reports</h2>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Report Name</th>
+                <th>Type</th>
+                <th>Date Range</th>
+                <th>Status</th>
+                <th>Format</th>
+                <th>File Size</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Daily Market Pulse</td>
+                <td><span class="badge primary">Daily Report</span></td>
+                <td>09-Jul-2026</td>
+                <td><span class="badge success">Completed</span></td>
+                <td><span class="badge danger">PDF</span></td>
+                <td>2.3 MB</td>
+                <td><button class="ghost-button">Download</button></td>
+              </tr>
+              <tr>
+                <td>Weekly Market Summary</td>
+                <td><span class="badge primary">Weekly Report</span></td>
+                <td>02-Jul to 09-Jul</td>
+                <td><span class="badge warning">Scheduled</span></td>
+                <td><span class="badge danger">PDF</span></td>
+                <td>3.1 MB</td>
+                <td><button class="ghost-button">Download</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+        <section class="card">
+          <div class="card-header">
+            <h2 class="card-title">Scheduled Reports</h2><button class="button">＋ Schedule New Report</button>
+          </div>
+          <p style="margin:0;color:var(--muted-foreground);">Daily Market Report runs every day at 01:00 PM. Weekly
+            Market Summary runs every Monday at 09:00 AM.</p>
+        </section>
+      </main>
+    </div>
+  </div>
+  {% endblock %}
+  

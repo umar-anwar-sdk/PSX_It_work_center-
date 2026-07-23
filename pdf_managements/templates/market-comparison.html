@@ -1,0 +1,147 @@
+{%extends 'base.html' %}
+
+{% block content %}
+    <div class="main-area">
+      <header class="topbar">
+        <button class="icon-button mobile-menu" data-mobile-menu>☰</button>
+        <div>
+          <h1>Market Comparison</h1>
+          <p>Compare market data between two different dates</p>
+        </div>
+        <div class="topbar-actions"><button class="outline-button">09-Jul-2026</button><button class="icon-button"
+            data-theme-toggle>☀</button></div>
+      </header>
+      <main class="content">
+        <section class="grid grid-5">
+          <article class="stat-card">
+            <div>
+              <p class="stat-label">Total Stocks</p>
+              <p class="stat-value">50</p>
+              <p class="stat-helper">No change</p>
+            </div>
+            <div class="stat-icon">📊</div>
+          </article>
+          <article class="stat-card">
+            <div>
+              <p class="stat-label">Price Up</p>
+              <p class="stat-value">28</p>
+              <p class="stat-helper">56% of total</p>
+            </div>
+            <div class="stat-icon">⬆</div>
+          </article>
+          <article class="stat-card">
+            <div>
+              <p class="stat-label">Price Down</p>
+              <p class="stat-value">19</p>
+              <p class="stat-helper">38% of total</p>
+            </div>
+            <div class="stat-icon">⬇</div>
+          </article>
+          <article class="stat-card">
+            <div>
+              <p class="stat-label">Unchanged</p>
+              <p class="stat-value">3</p>
+              <p class="stat-helper">6% of total</p>
+            </div>
+            <div class="stat-icon">➖</div>
+          </article>
+          <article class="stat-card">
+            <div>
+              <p class="stat-label">New Entries</p>
+              <p class="stat-value">6</p>
+              <p class="stat-helper">vs Yesterday: 3</p>
+            </div>
+            <div class="stat-icon">➕</div>
+          </article>
+        </section>
+        <section class="grid" style="grid-template-columns:1fr 360px;align-items:start;">
+          <section class="card table-card">
+            <div class="card-header">
+              <h2 class="card-title">Top 10 Stocks by Price Change %</h2>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th>Company</th>
+                  <th>Price</th>
+                  <th>Change %</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>LSECL</strong></td>
+                  <td>LSE Capital Limited</td>
+                  <td>7.84</td>
+                  <td class="badge success">+14.62%</td>
+                </tr>
+                <tr>
+                  <td><strong>PRL</strong></td>
+                  <td>Pakistan Refinery Limited</td>
+                  <td>41.85</td>
+                  <td class="badge success">+8.90%</td>
+                </tr>
+                <tr>
+                  <td><strong>CNERGY</strong></td>
+                  <td>Cnergyico PK Limited</td>
+                  <td>9.40</td>
+                  <td class="badge success">+7.80%</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+          <article class="card chart-card">
+            <div class="card-header">
+              <h2 class="card-title">Market Movement Summary</h2>
+            </div>
+            <div class="bar-chart">
+              <div class="bar" style="height: 80%"><span>Advancers</span></div>
+              <div class="bar" style="height: 10%"><span>Decliners</span></div>
+              <div class="bar" style="height: 20%"><span>Unchanged</span></div>
+            </div>
+          </article>
+        </section>
+        <section class="grid grid-3">
+          <article class="card">
+            <div class="card-header">
+              <h2 class="card-title">Biggest Gainers</h2>
+            </div>
+            <div class="list-stack">
+              <p class="badge success" style="width:fit-content;">LSECL +14.62%</p>
+              <p class="badge success" style="width:fit-content;">SBL +9.98%</p>
+              <p class="badge success" style="width:fit-content;">PRL +8.90%</p>
+            </div>
+          </article>
+          <article class="card">
+            <div class="card-header">
+              <h2 class="card-title">New &amp; Removed Comparison</h2>
+            </div>
+            <div class="grid" style="grid-template-columns:1fr 1fr;gap:1rem;">
+              <div><strong>Newly Added</strong>
+                <p>STPL</p>
+                <p>AGHA</p>
+                <p>JSBL</p>
+              </div>
+              <div><strong>Removed</strong>
+                <p>TPLP</p>
+                <p>DGKC</p>
+                <p>PPL</p>
+              </div>
+            </div>
+          </article>
+          <article class="card chart-card">
+            <div class="card-header">
+              <h2 class="card-title">Sector Comparison</h2>
+            </div>
+            <div class="bar-chart">
+              <div class="bar" style="height: 80%"><span>Banks</span></div>
+              <div class="bar" style="height: 60%"><span>Cement</span></div>
+              <div class="bar" style="height: 45%"><span>Oil &amp; Gas</span></div>
+              <div class="bar" style="height: 30%"><span>Power</span></div>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+  </div>
+  {% endblock %}

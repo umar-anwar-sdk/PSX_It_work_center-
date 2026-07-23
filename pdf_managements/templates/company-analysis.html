@@ -1,0 +1,179 @@
+{%extends 'base.html' %}
+
+{% block content %}
+<div class="main-area">
+  <header class="topbar">
+    <button class="icon-button mobile-menu" data-mobile-menu>☰</button>
+    <div>
+      <h1>Company Analysis</h1>
+      <p>Detailed analysis, history, trends and momentum</p>
+    </div>
+    <div class="topbar-actions">
+      <button class="outline-button">09-Jul-2026</button>
+      <button class="icon-button" data-theme-toggle>☀</button>
+    </div>
+  </header>
+  <main class="content">
+    <div class="section-row">
+      <input class="input" type="text" placeholder="Enter Symbol or Company Name..." />
+      <input class="input" type="text" value="CNERGY - Cnergyico PK Limited" />
+      <button class="icon-button">★</button>
+      <button class="button">Add to Watchlist</button>
+      <button class="outline-button">⬇ Download Report</button>
+    </div>
+    <section class="card">
+      <div class="grid" style="grid-template-columns:340px 1fr 360px; align-items:center;">
+        <div>
+          <div
+            style="width:96px;height:96px;border-radius:999px;border:1px solid var(--border);background:#fff7ed;color:#ea580c;display:grid;place-items:center;font-size:2rem;font-weight:800;">
+            CN</div>
+          <h2 style="margin:0.8rem 0 0;font-size:2rem;">CNERGY</h2>
+          <p style="margin:.25rem 0 0;color:var(--muted-foreground);font-weight:700;">Cnergyico PK Limited</p>
+          <div class="section-row" style="margin-top:1rem;">
+            <span class="badge success">Active</span>
+            <span class="badge primary">REFINERY</span>
+          </div>
+        </div>
+        <div class="metric-grid">
+          <div class="metric">
+            <div class="label">Current Price (PKR)</div>
+            <div class="value">9.40</div>
+            <div class="helper">+ 0.68 (7.80%)</div>
+          </div>
+          <div class="metric">
+            <div class="label">Previous Close</div>
+            <div class="value">8.72</div>
+            <div class="helper">Last session</div>
+          </div>
+          <div class="metric">
+            <div class="label">Volume</div>
+            <div class="value">211,683,514</div>
+            <div class="helper">+89.46% vs yesterday</div>
+          </div>
+        </div>
+        <div class="info-block">
+          <strong>Momentum &amp; AI Score</strong>
+          <div style="font-size:3rem;font-weight:800;color:var(--success);margin:1rem 0;">82</div>
+          <div style="color:var(--muted-foreground);font-size:.95rem;">Strong bullish momentum with high volume
+            accumulation.</div>
+        </div>
+      </div>
+    </section>
+    <section class="grid grid-3">
+      <article class="card">
+        <div class="card-header">
+          <h2 class="card-title">Price &amp; Change Summary</h2>
+        </div>
+        <div class="metric-grid">
+          <div class="metric">
+            <div class="label">Change Metric</div>
+            <div class="value">+7.80%</div>
+            <div class="helper">09-Jul-2026</div>
+          </div>
+          <div class="metric">
+            <div class="label">Change Metric</div>
+            <div class="value">+2.71%</div>
+            <div class="helper">09-Jul-2026</div>
+          </div>
+          <div class="metric">
+            <div class="label">Change Metric</div>
+            <div class="value">+13.65%</div>
+            <div class="helper">09-Jul-2026</div>
+          </div>
+          <div class="metric">
+            <div class="label">Change Metric</div>
+            <div class="value">+20.26%</div>
+            <div class="helper">09-Jul-2026</div>
+          </div>
+          <div class="metric">
+            <div class="label">Change Metric</div>
+            <div class="value">+14.62%</div>
+            <div class="helper">09-Jul-2026</div>
+          </div>
+          <div class="metric">
+            <div class="label">Change Metric</div>
+            <div class="value">-4.57%</div>
+            <div class="helper">09-Jul-2026</div>
+          </div>
+        </div>
+      </article>
+      <article class="card chart-card">
+        <div class="card-header">
+          <h2 class="card-title">Price History (Last 30 Days)</h2>
+        </div>
+        <div class="bar-chart">
+          <div class="bar" style="height: 45%"><span>1</span></div>
+          <div class="bar" style="height: 65%"><span>2</span></div>
+          <div class="bar" style="height: 55%"><span>3</span></div>
+          <div class="bar" style="height: 70%"><span>4</span></div>
+          <div class="bar" style="height: 90%"><span>5</span></div>
+          <div class="bar" style="height: 80%"><span>6</span></div>
+        </div>
+      </article>
+      <article class="card">
+        <div class="card-header">
+          <h2 class="card-title">Company Quick Info</h2>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:.65rem;color:var(--muted-foreground);font-size:.95rem;">
+          <p>Listed: 21-Dec-2017</p>
+          <p>52 Week Low: Rs. 6.10</p>
+          <p>Face Value: Rs. 10</p>
+          <p>Bloomberg Ticker: CNERGY PA</p>
+        </div>
+      </article>
+    </section>
+    <section class="card table-card">
+      <div class="card-header">
+        <h2 class="card-title">Recent Performance</h2>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Company</th>
+            <th>Sector</th>
+            <th>Price</th>
+            <th>Change %</th>
+            <th>Volume</th>
+            <th>Trend</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>CNERGY</strong></td>
+            <td>Cnergyico PK Limited</td>
+            <td>REFINERY</td>
+            <td>9.40</td>
+            <td class="badge success">+7.80%</td>
+            <td>211,683,514</td>
+            <td><span class="badge success">Up</span></td>
+            <td>⋯</td>
+          </tr>
+          <tr>
+            <td><strong>LSECL</strong></td>
+            <td>LSE Capital Limited</td>
+            <td>INV. BANKS / SECURITIES</td>
+            <td>7.84</td>
+            <td class="badge success">+14.62%</td>
+            <td>58,382,446</td>
+            <td><span class="badge success">Up</span></td>
+            <td>⋯</td>
+          </tr>
+          <tr>
+            <td><strong>PRL</strong></td>
+            <td>Pakistan Refinery Limited</td>
+            <td>REFINERY</td>
+            <td>41.85</td>
+            <td class="badge success">+8.90%</td>
+            <td>49,649,269</td>
+            <td><span class="badge success">Up</span></td>
+            <td>⋯</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</div>
+</div>
+{% endblock %}

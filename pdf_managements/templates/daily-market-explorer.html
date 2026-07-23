@@ -1,0 +1,126 @@
+
+    {%extends 'base.html' %}
+
+{% block content %}
+    <div class="main-area">
+      <header class="topbar">
+        <button class="icon-button mobile-menu" data-mobile-menu>☰</button>
+        <div>
+          <h1>Daily Market Explorer</h1>
+          <p>Explore daily market data and track entries, exits and trends</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="outline-button">09-Jul-2026</button>
+          <button class="icon-button" data-theme-toggle>☀</button>
+        </div>
+      </header>
+      <main class="content">
+        <section class="card">
+          <div class="section-row">
+            <button class="button">Top 50 Volume Leaders</button>
+            <button class="outline-button">Newly Added <span class="badge primary">6</span></button>
+            <button class="outline-button">Removed <span class="badge danger">4</span></button>
+            <button class="outline-button">Continuing <span class="badge success">40</span></button>
+            <button class="outline-button">Top Gainers <span class="badge success">40</span></button>
+            <button class="outline-button">Top Losers <span class="badge danger">40</span></button>
+            <button class="outline-button">Date Wise History</button>
+          </div>
+        </section>
+        <section class="card table-card">
+          <div class="card-header">
+            <h2 class="card-title">Top 50 Volume Leaders</h2>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Symbol</th>
+                <th>Company</th>
+                <th>Sector</th>
+                <th>Price</th>
+                <th>Change %</th>
+                <th>Volume</th>
+                <th>Trend</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>CNERGY</strong></td>
+                <td>Cnergyico PK Limited</td>
+                <td>REFINERY</td>
+                <td>9.40</td>
+                <td class="badge success">+7.80%</td>
+                <td>211,683,514</td>
+                <td><span class="badge success">Up</span></td>
+                <td>⋯</td>
+              </tr>
+              <tr>
+                <td><strong>LSECL</strong></td>
+                <td>LSE Capital Limited</td>
+                <td>INV. BANKS / SECURITIES</td>
+                <td>7.84</td>
+                <td class="badge success">+14.62%</td>
+                <td>58,382,446</td>
+                <td><span class="badge success">Up</span></td>
+                <td>⋯</td>
+              </tr>
+              <tr>
+                <td><strong>PACE</strong></td>
+                <td>Pace (Pakistan) Limited</td>
+                <td>PROPERTY</td>
+                <td>11.72</td>
+                <td class="badge danger">-4.64%</td>
+                <td>48,615,943</td>
+                <td><span class="badge danger">Down</span></td>
+                <td>⋯</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+        <section class="grid grid-5">
+          <article class="stat-card">
+            <div>
+              <p class="stat-label">Total Stocks</p>
+              <p class="stat-value">50</p>
+              <p class="stat-helper">No change</p>
+            </div>
+            <div class="stat-icon">📊</div>
+          </article>
+          <article class="stat-card">
+            <div>
+              <p class="stat-label">Price Up</p>
+              <p class="stat-value">28</p>
+              <p class="stat-helper">56% of total</p>
+            </div>
+            <div class="stat-icon">⬆</div>
+          </article>
+          <article class="stat-card">
+            <div>
+              <p class="stat-label">Price Down</p>
+              <p class="stat-value">19</p>
+              <p class="stat-helper">38% of total</p>
+            </div>
+            <div class="stat-icon">⬇</div>
+          </article>
+          <article class="stat-card">
+            <div>
+              <p class="stat-label">Unchanged</p>
+              <p class="stat-value">3</p>
+              <p class="stat-helper">6% of total</p>
+            </div>
+            <div class="stat-icon">➖</div>
+          </article>
+          <article class="stat-card">
+            <div>
+              <p class="stat-label">New Entries</p>
+              <p class="stat-value">6</p>
+              <p class="stat-helper">vs Yesterday: 3</p>
+            </div>
+            <div class="stat-icon">➕</div>
+          </article>
+        </section>
+      </main>
+    </div>
+  </div>
+  {% endblock %}
+ 

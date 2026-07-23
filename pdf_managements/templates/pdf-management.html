@@ -1,0 +1,323 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="main-area">
+
+    <header class="topbar">
+        <button class="icon-button mobile-menu" data-mobile-menu>☰</button>
+
+        <div>
+            <h1>PDF Management</h1>
+            <p>Upload, manage and process daily market PDFs</p>
+        </div>
+
+        <div class="topbar-actions">
+            <button class="outline-button">09-Jul-2026</button>
+            <button class="icon-button" data-theme-toggle>☀</button>
+        </div>
+    </header>
+
+    <main class="content">
+
+        <div class="section-row">
+            <span class="section-pill active">Upload PDF</span>
+            <span class="section-pill">Upload History</span>
+            <span class="section-pill">Processing Log</span>
+            <span class="section-pill">Validation Errors</span>
+        </div>
+
+        <section class="grid" style="grid-template-columns:1fr 420px;align-items:start;">
+
+            <!-- Upload Card -->
+
+            <article class="card">
+
+                <div class="card-header">
+                    <h2 class="card-title">Upload Daily PDF</h2>
+                </div>
+
+                <div class="grid" style="grid-template-columns:1fr 320px;align-items:start;">
+
+                    <form method="POST" enctype="multipart/form-data" style="width:100%;">
+
+                        {% csrf_token %}
+
+                        <div class="upload-box">
+
+                            <div>
+
+                                <div style="width:64px;
+                                            height:64px;
+                                            border-radius:999px;
+                                            background:rgba(37,99,235,.12);
+                                            display:grid;
+                                            place-items:center;
+                                            margin:0 auto 1rem;
+                                            color:var(--primary);">
+                                    📄
+                                </div>
+
+                                <h3 style="margin:0 0 .5rem;">
+                                    Drag and drop your PDF file here
+                                </h3>
+
+                                <p style="margin:0 0 .8rem;color:var(--muted-foreground);">
+                                    Only PDF files are allowed.
+                                    Max file size : 20MB
+                                </p>
+
+                                {% if error %}
+                                <div style="margin-bottom:15px;
+                                            color:red;
+                                            font-weight:600;">
+                                    {{ error }}
+                                </div>
+                                {% endif %}
+
+                               <input type="file" name="file" id="id_file" accept=".pdf">
+
+                                <label for="id_file" class="button" style="cursor:pointer;">
+                                    Choose PDF
+                                </label>
+
+                                <p id="selected-file" style="margin-top:10px;color:#666;">
+                                    No file selected
+                                </p>
+
+                                <br>
+
+                                <button type="submit" class="button">
+                                    Upload PDF
+                                </button>
+
+                                <script>
+                                    document.getElementById("id_file").addEventListener("change", function () {
+                                        if (this.files.length > 0) {
+                                            document.getElementById("selected-file").innerText = this.files[0].name;
+                                        }
+                                    });
+                                </script>
+
+                            </div>
+
+                        </div>
+
+                    </form>
+
+                    <!-- Tips -->
+
+                    <div class="card" style="background:var(--muted);
+                                border-color:transparent;
+                                box-shadow:none;">
+
+                        <strong>Tips</strong>
+
+                        <div style="display:flex;
+                                    flex-direction:column;
+                                    gap:.75rem;
+                                    margin-top:.9rem;
+                                    color:var(--muted-foreground);">
+
+                            <p>File name should contain the date</p>
+
+                            <p>Make sure PDF is not password protected</p>
+
+                            <p>Table should be clear and readable</p>
+
+                            <p>Best results with original PSX PDFs</p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </article>
+
+            <!-- Summary -->
+
+            <article class="card">
+
+                <div class="card-header">
+                    <h2 class="card-title">
+                        Processing Summary (Latest)
+                    </h2>
+                </div>
+
+                <div class="summary-list">
+
+                    <div>
+                        <span>Total Stocks Extracted</span>
+                        <strong>50</strong>
+                    </div>
+
+                    <div>
+                        <span>Successfully Processed</span>
+                        <strong>50</strong>
+                    </div>
+
+                    <div>
+                        <span>New Entries</span>
+                        <strong>6</strong>
+                    </div>
+
+                    <div>
+                        <span>Removed Entries</span>
+                        <strong>4</strong>
+                    </div>
+
+                    <div>
+                        <span>Continuing Companies</span>
+                        <strong>40</strong>
+                    </div>
+
+                    <div>
+                        <span>Validation Errors</span>
+                        <strong>0</strong>
+                    </div>
+
+                </div>
+
+                {% if pdfs %}
+
+                <div class="info-block" style="margin-top:1rem;
+                            background:rgba(22,163,74,.12);
+                            color:var(--success);">
+
+                    <strong>
+
+                        {% if pdfs.0.is_processed %}
+                        File processed successfully.
+                        {% else %}
+                        Processing...
+                        {% endif %}
+
+                    </strong>
+
+                    <div>
+
+                        Uploaded :
+                        {{ pdfs.0.uploaded_at|date:"d-M-Y h:i A" }}
+
+                    </div>
+
+                </div>
+
+                {% endif %}
+
+            </article>
+
+        </section>
+        <!-- Upload History -->
+
+        <section class="card table-card">
+
+            <div class="card-header">
+                <h2 class="card-title">
+                    Upload History
+                </h2>
+            </div>
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>Date</th>
+                        <th>File Name</th>
+                        <th>Uploaded On</th>
+                        <th>Stocks</th>
+                        <th>New</th>
+                        <th>Removed</th>
+                        <th>Continuing</th>
+                        <th>Status</th>
+                        <th>Action</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    {% for pdf in pdfs %}
+
+                    <tr>
+
+                        <td>
+                            {{ pdf.report_date|default:"-" }}
+                        </td>
+
+                        <td>
+                            {{ pdf.name }}
+                        </td>
+
+                        <td>
+                            {{ pdf.uploaded_at|date:"d-M-Y h:i A" }}
+                        </td>
+
+                        <!-- Ye columns baad me comparison ke baad fill honge -->
+
+                        <td>-</td>
+
+                        <td>-</td>
+
+                        <td>-</td>
+
+                        <td>-</td>
+
+                        <td>
+
+                            {% if pdf.is_processed %}
+
+                            <span class="badge success">
+
+                                Processed
+
+                            </span>
+
+                            {% else %}
+
+                            <span class="badge danger">
+
+                                Pending
+
+                            </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+
+                            ⋯
+
+                        </td>
+
+                    </tr>
+
+                    {% empty %}
+
+                    <tr>
+
+                        <td colspan="9" style="text-align:center;padding:30px;">
+
+                            No PDF uploaded yet.
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </section>
+
+    </main>
+
+</div>
+
+{% endblock %}

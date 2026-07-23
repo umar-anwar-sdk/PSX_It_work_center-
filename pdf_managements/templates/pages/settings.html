@@ -1,0 +1,97 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Settings</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-logo" aria-hidden="true">
+            <svg viewBox="0 0 32 32" width="28" height="28" fill="currentColor">
+              <path d="M5 24V12h4v12H5Zm6 0V7h4v17h-4Zm6 0V4h4v20h-4Zm6 0V10h4v14h-4Z" />
+              <path d="M4 26h24" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+          </div>
+          <div class="sidebar-brand">
+            <strong>PSX Daily Market</strong>
+            <span>Intelligence Engine</span>
+          </div>
+        </div>
+        <nav class="nav-list" aria-label="Primary navigation">
+          <a class="nav-link" href="{% url 'home' %}">Dashboard</a>
+          <a class="nav-link" href="{% url 'pdf-management' %}">PDF Management</a>
+          <a class="nav-link" href="{% url 'daily-market-explorer' %}">Daily Market Explorer</a>
+          <a class="nav-link" href="{% url 'company-analysis' %}">Company Analysis</a>
+          <a class="nav-link" href="{% url 'market-comparison' %}">Market Comparison</a>
+          <a class="nav-link" href="{% url 'market-analytics' %}">Market Analytics</a>
+          <a class="nav-link" href="{% url 'reports' %}">Reports</a>
+          <a class="nav-link" href="{% url 'watchlist' %}">Watchlist</a>
+          <a class="nav-link" href="{% url 'search-screener' %}">Search &amp; Screener</a>
+          <a class="nav-link active" href="{% url 'settings' %}">Settings</a>
+        </nav>
+        <div class="sidebar-footer"><div class="help-card">...</div></div>
+      </aside>
+      <div class="main-area">
+        <header class="topbar">
+          <button class="icon-button mobile-menu" data-mobile-menu>☰</button>
+          <div>
+            <h1>Settings</h1>
+            <p>Manage your preferences, alerts and application settings</p>
+          </div>
+          <div class="topbar-actions"><button class="outline-button">09-Jul-2026</button><button class="icon-button" data-theme-toggle>☀</button></div>
+        </header>
+        <main class="content">
+          <div class="section-row">
+            <span class="section-pill active">Profile</span><span class="section-pill">Preferences</span><span class="section-pill">Alerts</span><span class="section-pill">Notifications</span><span class="section-pill">Watchlist Settings</span><span class="section-pill">Data &amp; Updates</span><span class="section-pill">Security</span><span class="section-pill">API Access</span><span class="section-pill">Appearance</span>
+          </div>
+          <section class="grid grid-3">
+            <article class="card">
+              <div class="card-header"><h2 class="card-title">Profile Information</h2></div>
+              <div style="display:flex;align-items:center;gap:1rem;">
+                <div style="width:80px;height:80px;border-radius:999px;background:#0f172a;color:white;display:grid;place-items:center;font-weight:800;font-size:1.25rem;">AA</div>
+                <div>
+                  <strong>Adeel Ahmed <span class="badge primary">Admin</span></strong>
+                  <p style="margin:.25rem 0;color:var(--muted-foreground);">adeel.ahmed@email.com</p>
+                  <p style="margin:0;color:var(--muted-foreground);">Karachi, Pakistan</p>
+                </div>
+              </div>
+              <button class="outline-button" style="margin-top:1rem;width:100%;">Save</button>
+            </article>
+            <article class="card">
+              <div class="card-header"><h2 class="card-title">Preferences</h2></div>
+              <div class="form-grid">
+                <label>Default Market<input class="input" value="PSX - Pakistan Stock Exchange" /></label>
+                <label>Default Dashboard<input class="input" value="09-Jul-2026" /></label>
+                <label>Date Range<input class="input" value="09-Jul-2026" /></label>
+                <label>Currency<input class="input" value="09-Jul-2026" /></label>
+                <label>Timezone<input class="input" value="09-Jul-2026" /></label>
+              </div>
+              <button class="outline-button" style="margin-top:1rem;width:100%;">Save</button>
+            </article>
+            <article class="card">
+              <div class="card-header"><h2 class="card-title">Alert Preferences</h2></div>
+              <div class="toggle-row"><div><strong>Price Alerts</strong><p style="margin:.15rem 0 0;color:var(--muted-foreground);font-size:.9rem;">Receive operational notifications</p></div><button class="switch"><span></span></button></div>
+              <div class="toggle-row"><div><strong>Volume Alerts</strong><p style="margin:.15rem 0 0;color:var(--muted-foreground);font-size:.9rem;">Receive operational notifications</p></div><button class="switch"><span></span></button></div>
+              <div class="toggle-row"><div><strong>Market Alerts</strong><p style="margin:.15rem 0 0;color:var(--muted-foreground);font-size:.9rem;">Receive operational notifications</p></div><button class="switch off"><span></span></button></div>
+              <button class="outline-button" style="margin-top:1rem;width:100%;">Save</button>
+            </article>
+          </section>
+          <section class="card">
+            <div class="card-header"><h2 class="card-title">Security Overview</h2></div>
+            <div class="grid grid-3">
+              <div><strong>Password</strong><p style="color:var(--muted-foreground);">Last changed on 10-May-2026</p></div>
+              <div><span class="badge success">2FA Enabled</span><p style="margin-top:.5rem;">Your account is protected.</p></div>
+              <div><strong>3 Active Sessions</strong><p style="color:var(--muted-foreground);">Manage active sessions.</p></div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+    <script src="{% static 'js/main.js' %}"></script>
+  </body>
+</html>
