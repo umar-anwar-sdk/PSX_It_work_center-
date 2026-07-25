@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 
 from scraper.forms import PDFDocumentForm
-from scraper.models import PDFDocument
+from scraper.models import PDFDocument, ComparisonResult
 from scraper.utils import get_file_hash, get_table_data, process_pdf_document
 
 from .models import ScrapedRecord
@@ -123,4 +123,3 @@ def import_data_from_folder(folder):
             imported_count += 1
 
     return imported_count
-

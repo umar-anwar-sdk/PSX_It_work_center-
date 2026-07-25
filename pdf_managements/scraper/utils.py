@@ -8,7 +8,11 @@ from pathlib import Path
 import pdfplumber
 from django.utils import timezone
 
-from .models import ExtractedCompanyRecord
+from .models import (
+    ExtractedCompanyRecord,
+    PDFDocument,
+    ComparisonResult,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -186,8 +190,8 @@ def process_pdf_document(pdf_document):
     pdf_document.processed_at = timezone.now()
     pdf_document.save()
     logger.info("Saved PDF metadata for: %s", pdf_document.name)
-
     save_extracted_data(pdf_document, records)
+    compare_with_previous_pdf(pdf_document)
     return records
 
 
@@ -238,3 +242,84 @@ def format_decimal(value):
     if isinstance(value, Decimal):
         return format(value, ".2f")
     return str(value)
+
+
+
+
+def compare_with_previous_pdf(current_pdf):
+    """
+    Compare current PDF with the most recent previous processed PDF.
+    """
+
+    previous_pdf = (
+        PDFDocument.objects.filter(
+            is_processed=True,
+            report_date__lt=current_pdf.report_date,
+        )
+        .order_by("-report_date", "-report_time")
+        .first()
+    )
+
+    # First PDF hai to compare nahi hoga
+    if previous_pdf is None:
+        logger.info("No previous PDF found. Skipping comparison.")
+        return
+
+    previous_records = {
+        item.symbol: item
+        for item in previous_pdf.extracted_companies.all()
+    }
+
+    current_records = {
+        item.symbol: item
+        for item in current_pdf.extracted_companies.all()
+    }
+
+    # Agar dobara compare ho to purana result delete kar do
+    ComparisonResult.objects.filter(current_pdf=current_pdf).delete()
+
+    # Existing
+    for symbol in previous_records.keys() & current_records.keys():
+
+        old = previous_records[symbol]
+        new = current_records[symbol]
+
+        ComparisonResult.objects.create(
+            previous_pdf=previous_pdf,
+            current_pdf=current_pdf,
+            symbol=symbol,
+            company_name=new.company_name,
+            status="EXISTING",
+            previous_price=old.price,
+            current_price=new.price,
+        )
+
+    # New
+    for symbol in current_records.keys() - previous_records.keys():
+
+        new = current_records[symbol]
+
+        ComparisonResult.objects.create(
+            previous_pdf=previous_pdf,
+            current_pdf=current_pdf,
+            symbol=symbol,
+            company_name=new.company_name,
+            status="NEW",
+            current_price=new.price,
+        )
+
+    # Removed
+    for symbol in previous_records.keys() - current_records.keys():
+
+        old = previous_records[symbol]
+
+        ComparisonResult.objects.create(
+            previous_pdf=previous_pdf,
+            current_pdf=current_pdf,
+            symbol=symbol,
+            company_name=old.company_name,
+            status="REMOVED",
+            previous_price=old.price,
+        )
+
+    logger.info("Comparison completed successfully.")
