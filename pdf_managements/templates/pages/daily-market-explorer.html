@@ -44,41 +44,89 @@
             <p>Explore daily market data and track entries, exits and trends</p>
           </div>
           <div class="topbar-actions">
-            <button class="outline-button">09-Jul-2026</button>
+            <form method="get" style="display:inline-flex; align-items:center; gap:0.5rem;">
+              <select name="date" class="outline-button" onchange="this.form.submit()">
+                {% for available_date in available_dates %}
+                  <option value="{{ available_date|date:'Y-m-d' }}" {% if selected_date == available_date %}selected{% endif %}>{{ available_date|date:'d-M-Y' }}</option>
+                {% endfor %}
+              </select>
+              {% if selected_status and selected_status != 'all' %}
+                <input type="hidden" name="status" value="{{ selected_status }}" />
+              {% endif %}
+            </form>
             <button class="icon-button" data-theme-toggle>☀</button>
           </div>
         </header>
         <main class="content">
           <section class="card">
             <div class="section-row">
-              <button class="button">Top 50 Volume Leaders</button>
-              <button class="outline-button">Newly Added <span class="badge primary">6</span></button>
-              <button class="outline-button">Removed <span class="badge danger">4</span></button>
-              <button class="outline-button">Continuing <span class="badge success">40</span></button>
-              <button class="outline-button">Top Gainers <span class="badge success">40</span></button>
-              <button class="outline-button">Top Losers <span class="badge danger">40</span></button>
-              <button class="outline-button">Date Wise History</button>
+              <a class="button" href="{% url 'daily-market-explorer' %}?status=top50{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}">Top 50 Volume Leaders</a>
+              <a class="outline-button" href="{% url 'daily-market-explorer' %}?status=new{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}">Newly Added <span class="badge primary">{{ new_count }}</span></a>
+              <a class="outline-button" href="{% url 'daily-market-explorer' %}?status=removed{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}">Removed <span class="badge danger">{{ removed_count }}</span></a>
+              <a class="outline-button" href="{% url 'daily-market-explorer' %}?status=existing{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}">Existing <span class="badge success">{{ existing_count }}</span></a>
+              <a class="outline-button" href="{% url 'daily-market-explorer' %}{% if selected_date %}?date={{ selected_date|date:'Y-m-d' }}{% endif %}">All Companies</a>
+              <a class="outline-button" href="{% url 'daily-market-explorer' %}?status=top50{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}">Date Wise History</a>
             </div>
           </section>
           <section class="card table-card">
-            <div class="card-header"><h2 class="card-title">Top 50 Volume Leaders</h2></div>
+            <div class="card-header"><h2 class="card-title">{{ selected_pdf.name|default:'No PDF Selected' }}</h2></div>
             <table>
               <thead>
-                <tr><th>Symbol</th><th>Company</th><th>Sector</th><th>Price</th><th>Change %</th><th>Volume</th><th>Trend</th><th>Action</th></tr>
+                <tr><th>Symbol</th><th>Company</th><th>Price</th><th>Change Value</th><th>Change %</th><th>Volume</th><th>Status</th><th>Action</th></tr>
               </thead>
               <tbody>
-                <tr><td><strong>CNERGY</strong></td><td>Cnergyico PK Limited</td><td>REFINERY</td><td>9.40</td><td class="badge success">+7.80%</td><td>211,683,514</td><td><span class="badge success">Up</span></td><td>⋯</td></tr>
-                <tr><td><strong>LSECL</strong></td><td>LSE Capital Limited</td><td>INV. BANKS / SECURITIES</td><td>7.84</td><td class="badge success">+14.62%</td><td>58,382,446</td><td><span class="badge success">Up</span></td><td>⋯</td></tr>
-                <tr><td><strong>PACE</strong></td><td>Pace (Pakistan) Limited</td><td>PROPERTY</td><td>11.72</td><td class="badge danger">-4.64%</td><td>48,615,943</td><td><span class="badge danger">Down</span></td><td>⋯</td></tr>
+                {% if companies %}
+                  {% for company in companies %}
+                    <tr>
+                      <td><strong>{{ company.symbol }}</strong></td>
+                      <td>{{ company.company_name }}</td>
+                      <td>{% if company.price is not None %}{{ company.price }}{% else %}-{% endif %}</td>
+                      <td>{% if company.change_value is not None %}{{ company.change_value }}{% else %}-{% endif %}</td>
+                      <td>{% if company.change_percent is not None %}{{ company.change_percent }}{% else %}-{% endif %}</td>
+                      <td>{{ company.volume }}</td>
+                      <td>
+                        {% if company.status == 'NEW' %}
+                          <span class="badge primary">NEW</span>
+                        {% elif company.status == 'REMOVED' %}
+                          <span class="badge danger">REMOVED</span>
+                        {% elif company.status == 'EXISTING' %}
+                          <span class="badge success">EXISTING</span>
+                        {% else %}
+                          <span class="badge success">-</span>
+                        {% endif %}
+                      </td>
+                      <td>⋯</td>
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr><td colspan="8">No records found.</td></tr>
+                {% endif %}
               </tbody>
             </table>
+            {% if is_paginated %}
+              <div class="card-header" style="margin-top: 1rem; justify-content: center;">
+                <nav aria-label="Pagination">
+                  <ul class="pagination" style="display:flex; gap:0.5rem; list-style:none; padding:0; margin:0;">
+                    {% if page_obj.has_previous %}
+                      <li><a class="outline-button" href="?page={{ page_obj.previous_page_number }}{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}{% if selected_status and selected_status != 'all' %}&status={{ selected_status }}{% endif %}">Previous</a></li>
+                    {% endif %}
+                    {% for num in paginator.page_range %}
+                      <li><a class="outline-button" href="?page={{ num }}{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}{% if selected_status and selected_status != 'all' %}&status={{ selected_status }}{% endif %}">{{ num }}</a></li>
+                    {% endfor %}
+                    {% if page_obj.has_next %}
+                      <li><a class="outline-button" href="?page={{ page_obj.next_page_number }}{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}{% if selected_status and selected_status != 'all' %}&status={{ selected_status }}{% endif %}">Next</a></li>
+                    {% endif %}
+                  </ul>
+                </nav>
+              </div>
+            {% endif %}
           </section>
           <section class="grid grid-5">
-            <article class="stat-card"><div><p class="stat-label">Total Stocks</p><p class="stat-value">50</p><p class="stat-helper">No change</p></div><div class="stat-icon">📊</div></article>
-            <article class="stat-card"><div><p class="stat-label">Price Up</p><p class="stat-value">28</p><p class="stat-helper">56% of total</p></div><div class="stat-icon">⬆</div></article>
-            <article class="stat-card"><div><p class="stat-label">Price Down</p><p class="stat-value">19</p><p class="stat-helper">38% of total</p></div><div class="stat-icon">⬇</div></article>
-            <article class="stat-card"><div><p class="stat-label">Unchanged</p><p class="stat-value">3</p><p class="stat-helper">6% of total</p></div><div class="stat-icon">➖</div></article>
-            <article class="stat-card"><div><p class="stat-label">New Entries</p><p class="stat-value">6</p><p class="stat-helper">vs Yesterday: 3</p></div><div class="stat-icon">➕</div></article>
+            <article class="stat-card"><div><p class="stat-label">Total Companies</p><p class="stat-value">{{ total_companies }}</p><p class="stat-helper">{{ selected_pdf.report_date|default:'No date selected' }}</p></div><div class="stat-icon">📊</div></article>
+            <article class="stat-card"><div><p class="stat-label">Top 50 Volume Leaders</p><p class="stat-value">{{ top50_count }}</p><p class="stat-helper">{{ selected_pdf.name|default:'No PDF selected' }}</p></div><div class="stat-icon">⬆</div></article>
+            <article class="stat-card"><div><p class="stat-label">Newly Added Companies</p><p class="stat-value">{{ new_count }}</p><p class="stat-helper">{% if selected_pdf %}{{ selected_pdf.report_date }}{% else %}No date selected{% endif %}</p></div><div class="stat-icon">➕</div></article>
+            <article class="stat-card"><div><p class="stat-label">Removed Companies</p><p class="stat-value">{{ removed_count }}</p><p class="stat-helper">{% if selected_pdf %}{{ selected_pdf.report_date }}{% else %}No date selected{% endif %}</p></div><div class="stat-icon">➖</div></article>
+            <article class="stat-card"><div><p class="stat-label">Existing Companies</p><p class="stat-value">{{ existing_count }}</p><p class="stat-helper">{% if selected_pdf %}{{ selected_pdf.report_date }}{% else %}No date selected{% endif %}</p></div><div class="stat-icon">📈</div></article>
           </section>
         </main>
       </div>
