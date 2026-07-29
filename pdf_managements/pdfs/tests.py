@@ -1,7 +1,12 @@
 import json
+from datetime import date, time
 from pathlib import Path
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+from django.urls import reverse
+
+from scraper.models import ComparisonResult, ExtractedCompanyRecord, PDFDocument
 
 from .models import ScrapedRecord
 from .views import import_data_from_folder
@@ -43,3 +48,80 @@ class ScraperImportTests(TestCase):
         self.assertEqual(imported_count, 2)
         self.assertEqual(ScrapedRecord.objects.count(), 2)
         self.assertEqual(ScrapedRecord.objects.get(symbol='CNERGY').company, 'Cnergyico PK Limited')
+
+
+class DailyMarketExplorerViewTests(TestCase):
+    def setUp(self):
+        self.pdf_18 = self._create_pdf("pdf-18", date(2026, 7, 18), time(9, 0))
+        self.pdf_19 = self._create_pdf("pdf-19", date(2026, 7, 19), time(9, 0))
+        self.pdf_19_later = self._create_pdf("pdf-19-later", date(2026, 7, 19), time(10, 0))
+
+        self._create_company(self.pdf_18, "A", "Alpha", 1000)
+        self._create_company(self.pdf_18, "B", "Beta", 500)
+        self._create_company(self.pdf_19, "A", "Alpha", 1200)
+        self._create_company(self.pdf_19, "C", "Gamma", 2000)
+        self._create_company(self.pdf_19_later, "A", "Alpha", 1200)
+        self._create_company(self.pdf_19_later, "C", "Gamma", 2000)
+
+        ComparisonResult.objects.create(
+            previous_pdf=self.pdf_18,
+            current_pdf=self.pdf_19,
+            symbol="A",
+            company_name="Alpha",
+            status="EXISTING",
+            previous_price=1000,
+            current_price=1200,
+        )
+        ComparisonResult.objects.create(
+            previous_pdf=self.pdf_18,
+            current_pdf=self.pdf_19,
+            symbol="C",
+            company_name="Gamma",
+            status="NEW",
+            current_price=2000,
+        )
+        ComparisonResult.objects.create(
+            previous_pdf=self.pdf_18,
+            current_pdf=self.pdf_19,
+            symbol="B",
+            company_name="Beta",
+            status="REMOVED",
+            previous_price=500,
+        )
+
+    def _create_pdf(self, name, report_date, report_time):
+        return PDFDocument.objects.create(
+            name=name,
+            file=SimpleUploadedFile(f"{name}.pdf", b"pdf-content", content_type="application/pdf"),
+            report_date=report_date,
+            report_time=report_time,
+        )
+
+    def _create_company(self, pdf_document, symbol, company_name, volume):
+        return ExtractedCompanyRecord.objects.create(
+            pdf_document=pdf_document,
+            company_name=company_name,
+            symbol=symbol,
+            price=10,
+            change_value=1,
+            change_percent=1,
+            volume=volume,
+        )
+
+    def test_latest_pdf_is_selected_by_date_and_upload_time(self):
+        response = self.client.get(reverse("daily-market-explorer"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["selected_pdf"], self.pdf_19_later)
+        self.assertEqual(response.context["selected_date"], date(2026, 7, 19))
+        self.assertEqual(response.context["total_companies"], 2)
+        self.assertEqual(response.context["top50_count"], 2)
+        self.assertEqual(response.context["new_count"], 1)
+        self.assertEqual(response.context["removed_count"], 1)
+        self.assertEqual(response.context["existing_count"], 1)
+
+    def test_filter_param_returns_matching_companies(self):
+        response = self.client.get(reverse("daily-market-explorer"), {"filter": "new"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context["companies"].values_list("symbol", flat=True)), ["C"])
