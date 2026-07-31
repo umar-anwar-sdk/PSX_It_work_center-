@@ -7,6 +7,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Market Analytics</title>
 <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+<style>
+  .topbar > .topbar-actions { display: none; }
+  .topbar > .analytics-date-control { display: flex; }
+</style>
 </head>
 
 <body>
@@ -49,102 +53,91 @@
         </div>
         <div class="topbar-actions"><button class="outline-button">09-Jul-2026</button><button class="icon-button"
             data-theme-toggle>☀</button></div>
+        <div class="topbar-actions analytics-date-control">
+          <form method="get">
+            <select name="date" class="outline-button" aria-label="Select analytics date" onchange="this.form.submit()">
+              {% for available_date in available_dates %}
+                <option value="{{ available_date|date:'Y-m-d' }}" {% if selected_pdf.report_date == available_date %}selected{% endif %}>{{ available_date|date:'d-M-Y' }}</option>
+              {% empty %}
+                <option value="">No reports available</option>
+              {% endfor %}
+            </select>
+          </form>
+          <button class="icon-button" data-theme-toggle>☀</button>
+        </div>
       </header>
       <main class="content">
         <div class="section-row">
-          <span class="section-pill active">Overview</span><span class="section-pill">Sector Performance</span><span
-            class="section-pill">Heat Map</span><span class="section-pill">Momentum Matrix</span><span
-            class="section-pill">Trends</span><span class="section-pill">Streaks</span><span class="section-pill">Market
-            Breadth</span><span class="section-pill">Volume Analysis</span><span class="section-pill">Price
-            Analysis</span>
+          <a class="section-pill active" href="#overview">Overview</a><a class="section-pill" href="#sector-performance">Sector Performance</a><a
+            class="section-pill" href="#heat-map">Heat Map</a><a class="section-pill" href="#momentum">Momentum Matrix</a><a
+            class="section-pill" href="#insights">Trends</a><a class="section-pill" href="#alerts">Streaks</a><a class="section-pill" href="#market-breadth">Market
+            Breadth</a><a class="section-pill" href="#momentum">Volume Analysis</a><a class="section-pill" href="#insights">Price
+            Analysis</a>
         </div>
-        <section class="grid grid-5">
+        <section class="grid grid-5" id="overview">
           <article class="stat-card">
             <div>
               <p class="stat-label">Total Stocks</p>
-              <p class="stat-value">50</p>
-              <p class="stat-helper">No change</p>
+              <p class="stat-value">{{ total_stocks }}</p>
+              <p class="stat-helper">{% if previous_pdf %}vs {{ previous_pdf.report_date|date:'d-M-Y' }}{% else %}No previous report{% endif %}</p>
             </div>
             <div class="stat-icon">📊</div>
           </article>
           <article class="stat-card">
             <div>
               <p class="stat-label">Price Up</p>
-              <p class="stat-value">28</p>
-              <p class="stat-helper">56% of total</p>
+              <p class="stat-value">{{ price_up_count }}</p>
+              <p class="stat-helper">{{ price_up_percentage }}% of total</p>
             </div>
             <div class="stat-icon">⬆</div>
           </article>
           <article class="stat-card">
             <div>
               <p class="stat-label">Price Down</p>
-              <p class="stat-value">19</p>
-              <p class="stat-helper">38% of total</p>
+              <p class="stat-value">{{ price_down_count }}</p>
+              <p class="stat-helper">{{ price_down_percentage }}% of total</p>
             </div>
             <div class="stat-icon">⬇</div>
           </article>
           <article class="stat-card">
             <div>
               <p class="stat-label">Unchanged</p>
-              <p class="stat-value">3</p>
-              <p class="stat-helper">6% of total</p>
+              <p class="stat-value">{{ unchanged_count }}</p>
+              <p class="stat-helper">{{ unchanged_percentage }}% of total</p>
             </div>
             <div class="stat-icon">➖</div>
           </article>
           <article class="stat-card">
             <div>
               <p class="stat-label">New Entries</p>
-              <p class="stat-value">6</p>
-              <p class="stat-helper">vs Yesterday: 3</p>
+              <p class="stat-value">{{ new_entry_count }}</p>
+              <p class="stat-helper">vs previous report</p>
             </div>
             <div class="stat-icon">➕</div>
           </article>
         </section>
         <section class="grid grid-3">
-          <article class="card chart-card">
+          <article class="card chart-card" id="sector-performance">
             <div class="card-header">
               <h2 class="card-title">Sector Performance</h2>
             </div>
-            <div class="bar-chart">
-              <div class="bar" style="height: 80%"><span>Banks</span></div>
-              <div class="bar" style="height: 60%"><span>Cement</span></div>
-              <div class="bar" style="height: 45%"><span>Oil &amp; Gas</span></div>
-              <div class="bar" style="height: 30%"><span>Power</span></div>
-              <div class="bar" style="height: 15%"><span>Chemical</span></div>
-              <div class="bar" style="height: 10%"><span>Property</span></div>
-            </div>
+            <div class="bar-chart">{% for sector in sector_data %}<div class="bar" style="height: {{ sector.height }}%"><span>{{ sector.name }}</span></div>{% empty %}<p>No sector data available.</p>{% endfor %}</div>
           </article>
-          <article class="card">
+          <article class="card" id="heat-map">
             <div class="card-header">
               <h2 class="card-title">Heat Map (by % Change)</h2>
             </div>
-            <div class="grid grid-3">
-              <div class="info-block" style="background:rgba(22,163,74,.12);color:var(--success);">Banks<br />2.45%
-              </div>
-              <div class="info-block" style="background:rgba(22,163,74,.12);color:var(--success);">Cement<br />1.78%
-              </div>
-              <div class="info-block" style="background:rgba(22,163,74,.12);color:var(--success);">Oil &amp;
-                Gas<br />1.34%</div>
-              <div class="info-block" style="background:rgba(220,38,38,.12);color:var(--danger);">Power<br />0.65%</div>
-              <div class="info-block" style="background:rgba(220,38,38,.12);color:var(--danger);">Chemical<br />-0.42%
-              </div>
-              <div class="info-block" style="background:rgba(220,38,38,.12);color:var(--danger);">Property<br />-0.85%
-              </div>
-            </div>
+            <div class="grid grid-3">{% for sector in sector_data %}<div class="info-block" style="background:{% if sector.change_percent >= 0 %}rgba(22,163,74,.12);color:var(--success){% else %}rgba(220,38,38,.12);color:var(--danger){% endif %};">{{ sector.name }}<br />{% if sector.change_percent > 0 %}+{% endif %}{{ sector.change_percent|floatformat:2 }}%</div>{% empty %}<p>No sector data available.</p>{% endfor %}</div>
           </article>
-          <article class="card chart-card">
+          <article class="card chart-card" id="market-breadth">
             <div class="card-header">
               <h2 class="card-title">Market Breadth</h2>
             </div>
-            <div class="bar-chart">
-              <div class="bar" style="height: 80%"><span>Advancers</span></div>
-              <div class="bar" style="height: 10%"><span>Decliners</span></div>
-              <div class="bar" style="height: 20%"><span>Unchanged</span></div>
-            </div>
+            <div class="bar-chart">{% for item in breadth_bars %}<div class="bar" style="height: {{ item.height }}%"><span>{{ item.label }}</span></div>{% endfor %}</div>
           </article>
         </section>
         <section class="grid grid-3">
-          <section class="card table-card">
+          <section class="card table-card" id="momentum">
             <div class="card-header">
               <h2 class="card-title">Top 10 Momentum Stocks</h2>
             </div>
@@ -156,50 +149,34 @@
                   <th>Volume</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr>
-                  <td><strong>CNERGY</strong></td>
-                  <td>Cnergyico PK Limited</td>
-                  <td>211,683,514</td>
-                </tr>
-                <tr>
-                  <td><strong>LSECL</strong></td>
-                  <td>LSE Capital Limited</td>
-                  <td>58,382,446</td>
-                </tr>
-                <tr>
-                  <td><strong>PRL</strong></td>
-                  <td>Pakistan Refinery Limited</td>
-                  <td>49,649,269</td>
-                </tr>
-              </tbody>
+              <tbody>{% for stock in top_momentum %}<tr><td><strong>{{ stock.symbol }}</strong></td><td>{{ stock.company_name }}</td><td>{{ stock.volume|default:0 }}</td></tr>{% empty %}<tr><td colspan="3">No records found.</td></tr>{% endfor %}</tbody>
             </table>
           </section>
           
-          <article class="card">
+          <article class="card" id="insights">
             <div class="card-header"><h2 class="card-title">Insights</h2></div>
             <div class="list-item" style="display:block;">
               <div>
-                <strong>Momentum strengthening</strong>
-                <div class="rank-meta">CNERGY, THCCL and LSECL show strong accumulation with improving trend quality.</div>
+                <strong>{% if biggest_gainer %}{{ biggest_gainer.symbol }} leads price momentum{% else %}No price momentum data{% endif %}</strong>
+                <div class="rank-meta">{% if biggest_gainer %}{{ biggest_gainer.company_name }} is up {{ biggest_gainer.change_percent|floatformat:2 }}% in the selected report.{% else %}Upload a processed report to generate insights.{% endif %}</div>
               </div>
               <span style="display:inline-block;margin-top:10px;padding:6px 14px;background:#DCFCE7;color:#15803D;border-radius:20px;font-size:13px;font-weight:600;">Success</span>
             </div>
           </article>
 
-          <article class="card">
+          <article class="card" id="alerts">
             <div class="card-header"><h2 class="card-title">Alerts</h2></div>
             <div class="list-stack">
               <div class="list-item" style="display:block;">
                 <div>
-                  <strong>LSECL</strong>
+                  <strong>{% if biggest_gainer %}{{ biggest_gainer.symbol }}{% else %}No alert{% endif %}</strong>
                   <div class="rank-meta">Strong breakout detected · 2m ago</div>
                 </div>
                 <span style="display:inline-block;margin-top:10px;padding:6px 14px;background:#DCFCE7;color:#15803D;border-radius:20px;font-size:13px;font-weight:600;">Success</span>
               </div>
               <div class="list-item" style="display:block;">
                 <div>
-                  <strong>DFSM</strong>
+                  <strong>{% if biggest_loser %}{{ biggest_loser.symbol }}{% else %}No alert{% endif %}</strong>
                   <div class="rank-meta">Heavy volume with price drop · 15m ago</div>
                 </div>
                 <span style="display:inline-block;margin-top:10px;padding:6px 14px;background:#FEE2E2;color:#B91C1C;border-radius:20px;font-size:13px;font-weight:600;">Danger</span>
