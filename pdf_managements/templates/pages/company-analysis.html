@@ -1,136 +1,51 @@
+{% extends 'base.html' %}
 
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Company Analysis</title>
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
-  </head>
-  <body>
-    <div class="app-shell">
-      <aside class="sidebar">
-        <div class="sidebar-header">
-          <div class="sidebar-logo" aria-hidden="true">
-            <svg viewBox="0 0 32 32" width="28" height="28" fill="currentColor">
-              <path d="M5 24V12h4v12H5Zm6 0V7h4v17h-4Zm6 0V4h4v20h-4Zm6 0V10h4v14h-4Z" />
-              <path d="M4 26h24" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-            </svg>
-          </div>
-          <div class="sidebar-brand">
-            <strong>PSX Daily Market</strong>
-            <span>Intelligence Engine</span>
-          </div>
-        </div>
-        <nav class="nav-list" aria-label="Primary navigation">
-          <a class="nav-link" href="{% url 'home' %}">Dashboard</a>
-          <a class="nav-link" href="{% url 'pdf-management' %}">PDF Management</a>
-          <a class="nav-link" href="{% url 'daily-market-explorer' %}">Daily Market Explorer</a>
-          <a class="nav-link active" href="{% url 'company-analysis' %}">Company Analysis</a>
-          <a class="nav-link" href="{% url 'market-comparison' %}">Market Comparison</a>
-          <a class="nav-link" href="{% url 'market-analytics' %}">Market Analytics</a>
-          <a class="nav-link" href="{% url 'reports' %}">Reports</a>
-          <a class="nav-link" href="{% url 'watchlist' %}">Watchlist</a>
-          <a class="nav-link" href="{% url 'search-screener' %}">Search &amp; Screener</a>
-          <a class="nav-link" href="{% url 'settings' %}">Settings</a>
-        </nav>
-        <div class="sidebar-footer">
-          <div class="help-card">...</div>
-        </div>
-      </aside>
-      <div class="main-area">
-        <header class="topbar">
-          <button class="icon-button mobile-menu" data-mobile-menu>☰</button>
-          <div>
-            <h1>Company Analysis</h1>
-            <p>Detailed analysis, history, trends and momentum</p>
-          </div>
-          <div class="topbar-actions">
-            <button class="outline-button">09-Jul-2026</button>
-            <button class="icon-button" data-theme-toggle>☀</button>
-          </div>
-        </header>
-        <main class="content">
-          <div class="section-row">
-            <input class="input" type="text" placeholder="Enter Symbol or Company Name..." />
-            <input class="input" type="text" value="CNERGY - Cnergyico PK Limited" />
-            <button class="icon-button">★</button>
-            <button class="button">Add to Watchlist</button>
-            <button class="outline-button">⬇ Download Report</button>
-          </div>
-          <section class="card">
-            <div class="grid" style="grid-template-columns:340px 1fr 360px; align-items:center;">
-              <div>
-                <div style="width:96px;height:96px;border-radius:999px;border:1px solid var(--border);background:#fff7ed;color:#ea580c;display:grid;place-items:center;font-size:2rem;font-weight:800;">CN</div>
-                <h2 style="margin:0.8rem 0 0;font-size:2rem;">CNERGY</h2>
-                <p style="margin:.25rem 0 0;color:var(--muted-foreground);font-weight:700;">Cnergyico PK Limited</p>
-                <div class="section-row" style="margin-top:1rem;">
-                  <span class="badge success">Active</span>
-                  <span class="badge primary">REFINERY</span>
-                </div>
-              </div>
-              <div class="metric-grid">
-                <div class="metric"><div class="label">Current Price (PKR)</div><div class="value">9.40</div><div class="helper">+ 0.68 (7.80%)</div></div>
-                <div class="metric"><div class="label">Previous Close</div><div class="value">8.72</div><div class="helper">Last session</div></div>
-                <div class="metric"><div class="label">Volume</div><div class="value">211,683,514</div><div class="helper">+89.46% vs yesterday</div></div>
-              </div>
-              <div class="info-block">
-                <strong>Momentum &amp; AI Score</strong>
-                <div style="font-size:3rem;font-weight:800;color:var(--success);margin:1rem 0;">82</div>
-                <div style="color:var(--muted-foreground);font-size:.95rem;">Strong bullish momentum with high volume accumulation.</div>
-              </div>
-            </div>
-          </section>
-          <section class="grid grid-3">
-            <article class="card">
-              <div class="card-header"><h2 class="card-title">Price &amp; Change Summary</h2></div>
-              <div class="metric-grid">
-                <div class="metric"><div class="label">Change Metric</div><div class="value">+7.80%</div><div class="helper">09-Jul-2026</div></div>
-                <div class="metric"><div class="label">Change Metric</div><div class="value">+2.71%</div><div class="helper">09-Jul-2026</div></div>
-                <div class="metric"><div class="label">Change Metric</div><div class="value">+13.65%</div><div class="helper">09-Jul-2026</div></div>
-                <div class="metric"><div class="label">Change Metric</div><div class="value">+20.26%</div><div class="helper">09-Jul-2026</div></div>
-                <div class="metric"><div class="label">Change Metric</div><div class="value">+14.62%</div><div class="helper">09-Jul-2026</div></div>
-                <div class="metric"><div class="label">Change Metric</div><div class="value">-4.57%</div><div class="helper">09-Jul-2026</div></div>
-              </div>
-            </article>
-            <article class="card chart-card">
-              <div class="card-header"><h2 class="card-title">Price History (Last 30 Days)</h2></div>
-              <div class="bar-chart">
-                <div class="bar" style="height: 45%"><span>1</span></div>
-                <div class="bar" style="height: 65%"><span>2</span></div>
-                <div class="bar" style="height: 55%"><span>3</span></div>
-                <div class="bar" style="height: 70%"><span>4</span></div>
-                <div class="bar" style="height: 90%"><span>5</span></div>
-                <div class="bar" style="height: 80%"><span>6</span></div>
-              </div>
-            </article>
-            <article class="card">
-              <div class="card-header"><h2 class="card-title">Company Quick Info</h2></div>
-              <div style="display:flex;flex-direction:column;gap:.65rem;color:var(--muted-foreground);font-size:.95rem;">
-                <p>Listed: 21-Dec-2017</p>
-                <p>52 Week Low: Rs. 6.10</p>
-                <p>Face Value: Rs. 10</p>
-                <p>Bloomberg Ticker: CNERGY PA</p>
-              </div>
-            </article>
-          </section>
-          <section class="card table-card">
-            <div class="card-header"><h2 class="card-title">Recent Performance</h2></div>
-            <table>
-              <thead>
-                <tr><th>Symbol</th><th>Company</th><th>Sector</th><th>Price</th><th>Change %</th><th>Volume</th><th>Trend</th><th>Action</th></tr>
-              </thead>
-              <tbody>
-                <tr><td><strong>CNERGY</strong></td><td>Cnergyico PK Limited</td><td>REFINERY</td><td>9.40</td><td class="badge success">+7.80%</td><td>211,683,514</td><td><span class="badge success">Up</span></td><td>⋯</td></tr>
-                <tr><td><strong>LSECL</strong></td><td>LSE Capital Limited</td><td>INV. BANKS / SECURITIES</td><td>7.84</td><td class="badge success">+14.62%</td><td>58,382,446</td><td><span class="badge success">Up</span></td><td>⋯</td></tr>
-                <tr><td><strong>PRL</strong></td><td>Pakistan Refinery Limited</td><td>REFINERY</td><td>41.85</td><td class="badge success">+8.90%</td><td>49,649,269</td><td><span class="badge success">Up</span></td><td>⋯</td></tr>
-              </tbody>
-            </table>
-          </section>
-        </main>
+{% block content %}
+<div class="main-area">
+  <header class="topbar">
+    <button class="icon-button mobile-menu" data-mobile-menu>☰</button>
+    <div><h1>Company Analysis</h1><p>Detailed analysis, history, trends and momentum</p></div>
+    <div class="topbar-actions"><button class="outline-button">{% if company %}{{ company.pdf_document.report_date|date:"d-M-Y" }}{% else %}Latest saved data{% endif %}</button><button class="icon-button" data-theme-toggle>☀</button></div>
+  </header>
+  <main class="content">
+    <form class="section-row" method="get">
+      <input class="input" name="q" type="text" value="{{ search_query }}" placeholder="Enter Symbol or Company Name..." />
+      <input class="input" type="text" value="{% if company %}{{ company.symbol }} - {{ company.company_name }}{% endif %}" placeholder="Selected company" readonly />
+      <button class="icon-button" title="Search">⌕</button>
+      <button class="button" type="button">Add to Watchlist</button>
+      <button class="outline-button" type="submit" name="download" value="csv">⬇ Download Report</button>
+    </form>
+    {% if result_not_found %}<p style="color:var(--muted-foreground);margin:0 0 1rem;">No saved company data was found for “{{ search_query }}”.</p>{% endif %}
+
+    <section class="card"><div class="grid" style="grid-template-columns:340px 1fr 360px; align-items:center;">
+      <div>
+        <div style="width:96px;height:96px;border-radius:999px;border:1px solid var(--border);background:#fff7ed;color:#ea580c;display:grid;place-items:center;font-size:2rem;font-weight:800;">{% if company %}{{ company.symbol|slice:":2" }}{% else %}--{% endif %}</div>
+        <h2 style="margin:0.8rem 0 0;font-size:2rem;">{% if company %}{{ company.symbol }}{% else %}No company selected{% endif %}</h2>
+        <p style="margin:.25rem 0 0;color:var(--muted-foreground);font-weight:700;">{% if company %}{{ company.company_name }}{% else %}Search a saved symbol or company name above{% endif %}</p>
+        <div class="section-row" style="margin-top:1rem;"><span class="badge success">{% if company %}Saved{% else %}No data{% endif %}</span><span class="badge primary">{% if company %}{{ company.pdf_document.report_date|date:"d-M-Y" }}{% endif %}</span></div>
       </div>
-    </div>
-    <script src="{% static 'js/main.js' %}"></script>
-  </body>
-</html>
+      <div class="metric-grid">
+        <div class="metric"><div class="label">Current Price (PKR)</div><div class="value">{% if company.price is not None %}{{ company.price|floatformat:2 }}{% else %}—{% endif %}</div><div class="helper">{% if company.change_value is not None %}{{ company.change_value|floatformat:2 }} ({% if company.change_percent is not None %}{{ company.change_percent|floatformat:2 }}%{% endif %}){% else %}No change data{% endif %}</div></div>
+        <div class="metric"><div class="label">Previous Close</div><div class="value">{% if previous_record and previous_record.price is not None %}{{ previous_record.price|floatformat:2 }}{% else %}—{% endif %}</div><div class="helper">{% if previous_record %}Previous saved session{% else %}No previous session{% endif %}</div></div>
+        <div class="metric"><div class="label">Volume</div><div class="value">{% if company.volume is not None %}{{ company.volume }}{% else %}—{% endif %}</div><div class="helper">{% if company %}Saved trading volume{% else %}No volume data{% endif %}</div></div>
+      </div>
+      <div class="info-block"><strong>Momentum &amp; AI Score</strong><div style="font-size:3rem;font-weight:800;color:var(--success);margin:1rem 0;">{% if company.change_percent is not None %}{{ company.change_percent|floatformat:0 }}{% else %}—{% endif %}</div><div style="color:var(--muted-foreground);font-size:.95rem;">{% if company %}Based on the latest saved market record.{% else %}Search to view saved market data.{% endif %}</div></div>
+    </div></section>
+
+    <section class="grid grid-3">
+      <article class="card"><div class="card-header"><h2 class="card-title">Price &amp; Change Summary</h2></div><div class="metric-grid">
+        <div class="metric"><div class="label">Change %</div><div class="value">{% if company.change_percent is not None %}{{ company.change_percent|floatformat:2 }}%{% else %}—{% endif %}</div><div class="helper">{% if company %}{{ company.pdf_document.report_date|date:"d-M-Y" }}{% endif %}</div></div>
+        <div class="metric"><div class="label">Change Value</div><div class="value">{% if company.change_value is not None %}{{ company.change_value|floatformat:2 }}{% else %}—{% endif %}</div><div class="helper">Price change</div></div>
+        <div class="metric"><div class="label">Latest Price</div><div class="value">{% if company.price is not None %}{{ company.price|floatformat:2 }}{% else %}—{% endif %}</div><div class="helper">Latest saved session</div></div>
+        <div class="metric"><div class="label">Saved Sessions</div><div class="value">{{ history|length }}</div><div class="helper">Available history</div></div>
+      </div></article>
+      <article class="card chart-card"><div class="card-header"><h2 class="card-title">Price History (Saved Sessions)</h2></div><div class="bar-chart">{% for point in chart_points %}<div class="bar" style="height: {{ point.height }}%"><span>{{ point.label }}</span></div>{% empty %}<div style="color:var(--muted-foreground);">No saved price history available.</div>{% endfor %}</div></article>
+      <article class="card"><div class="card-header"><h2 class="card-title">Company Quick Info</h2></div><div style="display:flex;flex-direction:column;gap:.65rem;color:var(--muted-foreground);font-size:.95rem;"><p>Latest saved date: {% if company %}{{ company.pdf_document.report_date|date:"d-M-Y" }}{% else %}—{% endif %}</p><p>Previous close: {% if previous_record %}{{ previous_record.price|floatformat:2 }}{% else %}—{% endif %}</p><p>Saved sessions: {{ history|length }}</p><p>Symbol: {% if company %}{{ company.symbol }}{% else %}—{% endif %}</p></div></article>
+    </section>
+
+    <section class="card table-card"><div class="card-header"><h2 class="card-title">Recent Performance</h2></div><table><thead><tr><th>Symbol</th><th>Company</th><th>Sector</th><th>Price</th><th>Change %</th><th>Volume</th><th>Trend</th><th>Action</th></tr></thead><tbody>
+      {% for record in history %}<tr><td><strong>{{ record.symbol }}</strong></td><td>{{ record.company_name }}</td><td>Saved record</td><td>{% if record.price is not None %}{{ record.price|floatformat:2 }}{% else %}—{% endif %}</td><td class="badge {% if record.change_percent is not None and record.change_percent < 0 %}danger{% else %}success{% endif %}">{% if record.change_percent is not None %}{{ record.change_percent|floatformat:2 }}%{% else %}—{% endif %}</td><td>{% if record.volume is not None %}{{ record.volume }}{% else %}—{% endif %}</td><td><span class="badge {% if record.change_percent is not None and record.change_percent < 0 %}danger{% else %}success{% endif %}">{% if record.change_percent is not None and record.change_percent < 0 %}Down{% else %}Up{% endif %}</span></td><td>{{ record.pdf_document.report_date|date:"d-M-Y" }}</td></tr>{% empty %}<tr><td colspan="8" style="text-align:center;color:var(--muted-foreground);">No saved company records available.</td></tr>{% endfor %}
+    </tbody></table></section>
+  </main>
+</div>
+{% endblock %}
