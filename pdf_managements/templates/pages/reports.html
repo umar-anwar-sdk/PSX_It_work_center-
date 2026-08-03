@@ -43,37 +43,92 @@
             <h1>Reports</h1>
             <p>Generate and download detailed market reports</p>
           </div>
-          <div class="topbar-actions"><button class="outline-button">09-Jul-2026</button><button class="icon-button" data-theme-toggle>☀</button></div>
+          <div class="topbar-actions">
+            <form method="get">
+              <select name="date" class="outline-button" aria-label="Select report date" onchange="this.form.submit()">
+                {% for d in available_dates %}
+                  <option value="{{ d.iso }}" {% if selected_iso == d.iso %}selected{% endif %}>{{ d.display }}</option>
+                {% empty %}
+                  <option value="">No reports available</option>
+                {% endfor %}
+              </select>
+            </form>
+            <button class="icon-button" data-theme-toggle type="button">&#9788;</button>
+          </div>
         </header>
-        <main class="content">
-          <section class="card">
-            <div class="card-header"><h2 class="card-title">Generate New Report</h2></div>
-            <div class="grid grid-4">
-              <div class="card" style="padding:1rem;text-align:center;box-shadow:none;background:var(--card);"><div style="width:48px;height:48px;border-radius:999px;background:rgba(37,99,235,.12);display:grid;place-items:center;margin:0 auto 1rem;color:var(--primary);">📅</div><p style="font-weight:800;">Daily Report</p><p style="color:var(--muted-foreground);font-size:.85rem;">Performance and market analytics</p><button class="outline-button">Generate</button></div>
-              <div class="card" style="padding:1rem;text-align:center;box-shadow:none;background:var(--card);"><div style="width:48px;height:48px;border-radius:999px;background:rgba(37,99,235,.12);display:grid;place-items:center;margin:0 auto 1rem;color:var(--primary);">📅</div><p style="font-weight:800;">Weekly Report</p><p style="color:var(--muted-foreground);font-size:.85rem;">Performance and market analytics</p><button class="outline-button">Generate</button></div>
-              <div class="card" style="padding:1rem;text-align:center;box-shadow:none;background:var(--card);"><div style="width:48px;height:48px;border-radius:999px;background:rgba(37,99,235,.12);display:grid;place-items:center;margin:0 auto 1rem;color:var(--primary);">📅</div><p style="font-weight:800;">Monthly Report</p><p style="color:var(--muted-foreground);font-size:.85rem;">Performance and market analytics</p><button class="outline-button">Generate</button></div>
-              <div class="card" style="padding:1rem;text-align:center;box-shadow:none;background:var(--card);"><div style="width:48px;height:48px;border-radius:999px;background:rgba(37,99,235,.12);display:grid;place-items:center;margin:0 auto 1rem;color:var(--primary);">📊</div><p style="font-weight:800;">Quarterly Report</p><p style="color:var(--muted-foreground);font-size:.85rem;">Performance and market analytics</p><button class="outline-button">Generate</button></div>
-            </div>
-          </section>
-          <section class="card table-card">
-            <div class="card-header"><h2 class="card-title">Recent Reports</h2></div>
-            <table>
-              <thead>
-                <tr><th>Report Name</th><th>Type</th><th>Date Range</th><th>Status</th><th>Format</th><th>File Size</th><th>Action</th></tr>
-              </thead>
-              <tbody>
-                <tr><td>Daily Market Pulse</td><td><span class="badge primary">Daily Report</span></td><td>09-Jul-2026</td><td><span class="badge success">Completed</span></td><td><span class="badge danger">PDF</span></td><td>2.3 MB</td><td><button class="ghost-button">Download</button></td></tr>
-                <tr><td>Weekly Market Summary</td><td><span class="badge primary">Weekly Report</span></td><td>02-Jul to 09-Jul</td><td><span class="badge warning">Scheduled</span></td><td><span class="badge danger">PDF</span></td><td>3.1 MB</td><td><button class="ghost-button">Download</button></td></tr>
-              </tbody>
-            </table>
-          </section>
-          <section class="card">
-            <div class="card-header"><h2 class="card-title">Scheduled Reports</h2><button class="button">＋ Schedule New Report</button></div>
-            <p style="margin:0;color:var(--muted-foreground);">Daily Market Report runs every day at 01:00 PM. Weekly Market Summary runs every Monday at 09:00 AM.</p>
-          </section>
-        </main>
+            <main class="content">
+              {% if messages %}
+                {% for message in messages %}<div class="report-message {{ message.tags }}">{{ message }}</div>{% endfor %}
+              {% endif %}
+
+              <section class="card">
+                <div class="card-header"><h2 class="card-title">Generate New Report</h2></div>
+                <div class="grid grid-4">
+                  {% for type_key, type_data in report_types.items %}
+                    <article class="card" style="padding:1rem;text-align:center;box-shadow:none;background:var(--card);">
+                      <div style="width:48px;height:48px;border-radius:999px;background:rgba(37,99,235,.12);display:grid;place-items:center;margin:0 auto 1rem;color:var(--primary);">{% if type_key == 'quarterly' %}📊{% else %}📅{% endif %}</div>
+                      <p style="font-weight:800;">{{ type_data.0 }}</p>
+                      <p style="color:var(--muted-foreground);font-size:.85rem;">Performance and market analytics</p>
+                      <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="report_type" value="{{ type_key }}">
+                        <button class="outline-button" type="submit">Generate</button>
+                      </form>
+                    </article>
+                  {% endfor %}
+                </div>
+              </section>
+
+              <section class="card table-card">
+                <div class="card-header"><h2 class="card-title">Recent Reports</h2></div>
+                <table>
+                  <thead>
+                    <tr><th>Report Name</th><th>Type</th><th>Date Range</th><th>Status</th><th>Format</th><th>File Size</th><th>Action</th></tr>
+                  </thead>
+                  <tbody>
+                    {% for report in recent_reports %}
+                      <tr>
+                        <td>{{ report.name }}</td>
+                        <td><span class="badge primary">{{ report.get_report_type_display }}</span></td>
+                        <td>{{ report.date_from|date:"d-M-Y" }}{% if report.date_from != report.date_to %} to {{ report.date_to|date:"d-M-Y" }}{% endif %}</td>
+                        <td><span class="badge success">Completed</span></td>
+                        <td><span class="badge danger">PDF</span></td>
+                        <td>{% if report.file.size %}{{ report.file.size|filesizeformat }}{% else %}&mdash;{% endif %}</td>
+                        <td><a class="ghost-button" href="{% url 'download-report' report.pk %}">Download</a></td>
+                      </tr>
+                    {% empty %}
+                      <tr><td colspan="7" class="empty-table">No reports generated yet. Choose a report card and click Generate.</td></tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </section>
+
+              <section class="card">
+                <div class="card-header"><h2 class="card-title">Scheduled Reports</h2><button class="button" type="button" id="schedule-btn">＋ Schedule New Report</button></div>
+                <p style="margin:0;color:var(--muted-foreground);">Daily Market Report runs every day at 01:00 PM. Weekly Market Summary runs every Monday at 09:00 AM.</p>
+                <form id="schedule-form" method="post" style="display:none;">
+                  {% csrf_token %}
+                  <input type="hidden" name="report_type" id="schedule-report-type" value="daily">
+                </form>
+              </section>
+            </main>
       </div>
     </div>
     <script src="{% static 'js/main.js' %}"></script>
+    <script>
+      (function(){
+        var btn = document.getElementById('schedule-btn');
+        if (!btn) return;
+        btn.addEventListener('click', function(){
+          var type = prompt('Enter report type to schedule (daily, weekly, monthly, quarterly):', 'daily');
+          if (!type) return;
+          type = type.toLowerCase();
+          var allowed = ['daily','weekly','monthly','quarterly'];
+          if (allowed.indexOf(type) === -1) { alert('Invalid report type'); return; }
+          document.getElementById('schedule-report-type').value = type;
+          document.getElementById('schedule-form').submit();
+        });
+      })();
+    </script>
   </body>
 </html>

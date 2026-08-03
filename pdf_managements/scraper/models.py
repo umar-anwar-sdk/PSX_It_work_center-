@@ -76,3 +76,25 @@ class ComparisonResult(models.Model):
 
     def __str__(self):
         return f"{self.symbol} - {self.status}"
+
+
+class GeneratedReport(models.Model):
+    REPORT_TYPES = [
+        ("daily", "Daily Report"),
+        ("weekly", "Weekly Report"),
+        ("monthly", "Monthly Report"),
+        ("quarterly", "Quarterly Report"),
+    ]
+
+    report_type = models.CharField(max_length=20, choices=REPORT_TYPES)
+    name = models.CharField(max_length=255)
+    date_from = models.DateField()
+    date_to = models.DateField()
+    file = models.FileField(upload_to="reports/")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.name

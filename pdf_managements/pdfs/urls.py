@@ -3,6 +3,7 @@ from django.urls import path
 from .views import (
     company_analysis,
     daily_market_explorer,
+    download_report,
     home,
     market_analysis,
     market_comparison,
@@ -23,6 +24,7 @@ urlpatterns = [
     path("pages/pdf-management/", pdf_management, name="pdf-management"),
     path("pages/extracted-data/<int:pk>/", pdf_details, name="extracted-data"),
     path("pages/reports/", reports, name="reports"),
+    path("pages/reports/<int:pk>/download/", download_report, name="download-report"),
     path("pages/search-screener/", search_screener, name="search-screener"),
     path("pages/settings/", settings, name="settings"),
     path("pages/watchlist/", watchlist, name="watchlist"),

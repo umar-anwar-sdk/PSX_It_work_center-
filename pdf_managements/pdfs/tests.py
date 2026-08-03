@@ -6,7 +6,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
-from scraper.models import ComparisonResult, ExtractedCompanyRecord, PDFDocument
+from scraper.models import ComparisonResult, ExtractedCompanyRecord, GeneratedReport, PDFDocument
 
 from .models import ScrapedRecord
 from .views import import_data_from_folder
@@ -125,3 +125,29 @@ class DailyMarketExplorerViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(list(response.context["companies"].values_list("symbol", flat=True)), ["C"])
+
+
+class ReportsViewTests(TestCase):
+    def test_generates_and_downloads_a_selected_report(self):
+        pdf = PDFDocument.objects.create(
+            name="daily-data",
+            file=SimpleUploadedFile("daily-data.pdf", b"pdf-content", content_type="application/pdf"),
+            report_date=date(2026, 7, 19),
+            is_processed=True,
+        )
+        ExtractedCompanyRecord.objects.create(
+            pdf_document=pdf,
+            company_name="Alpha",
+            symbol="ALPHA",
+            price=10,
+            volume=100,
+        )
+
+        response = self.client.post(reverse("reports"), {"report_type": "weekly"})
+
+        self.assertRedirects(response, f"{reverse('reports')}?type=weekly")
+        report = GeneratedReport.objects.get()
+        self.assertEqual(report.report_type, "weekly")
+        download = self.client.get(reverse("download-report", args=[report.pk]))
+        self.assertEqual(download.status_code, 200)
+        self.assertEqual(b"".join(download.streaming_content)[:8], b"%PDF-1.4")

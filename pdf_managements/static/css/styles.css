@@ -97,6 +97,19 @@ body.dark .help-card { background: linear-gradient(135deg, rgba(59,130,246,.16),
 .card {
   background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 1.1rem; box-shadow: var(--shadow);
 }
+.report-option { padding: 1rem; text-align: center; box-shadow: none; background: var(--card); cursor: pointer; transition: background .2s ease, border-color .2s ease; }
+.report-option.active { background: var(--primary); border-color: var(--primary); color: var(--primary-foreground); }
+.report-option-link { display: block; color: inherit; text-decoration: none; }
+.report-option-icon { width: 48px; height: 48px; border-radius: 999px; background: rgba(37,99,235,.12); display: grid; place-items: center; margin: 0 auto 1rem; color: var(--primary); }
+.report-option.active .report-option-icon { background: rgba(255,255,255,.18); color: var(--primary-foreground); }
+.report-option-title { font-weight: 800; margin: 0; }
+.report-option-description { color: var(--muted-foreground); font-size: .85rem; min-height: 2.5em; }
+.report-option.active .report-option-description { color: rgba(255,255,255,.82); }
+.report-option .outline-button { margin-top: .35rem; }
+.report-option.active .outline-button { color: var(--primary); border-color: transparent; background: var(--primary-foreground); }
+.report-message { padding: .8rem 1rem; border-radius: 12px; background: rgba(37,99,235,.1); color: var(--foreground); }
+.report-message.success { background: rgba(22,163,74,.13); color: #15803d; }
+.empty-table { text-align: center; color: var(--muted-foreground); padding: 1.5rem !important; }
 .card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: .75rem; }
 .card-title { margin: 0; font-size: 1rem; font-weight: 800; }
 .card-subtitle { margin: .25rem 0 0; color: var(--muted-foreground); font-size: .9rem; }

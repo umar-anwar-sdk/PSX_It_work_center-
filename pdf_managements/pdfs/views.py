@@ -2,17 +2,18 @@ import json
 import logging
 import os
 import csv
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
 from django.contrib import messages
+from django.core.files.base import ContentFile
 from django.core.paginator import Paginator
-from django.http import HttpResponse
+from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from scraper.forms import PDFDocumentForm
-from scraper.models import ComparisonResult, ExtractedCompanyRecord, PDFDocument
+from scraper.models import ComparisonResult, ExtractedCompanyRecord, GeneratedReport, PDFDocument
 from scraper.utils import get_file_hash, get_table_data, process_pdf_document
 
 from .models import ScrapedRecord
@@ -599,8 +600,129 @@ def pdf_details(request, pk):
     return render(request, "pages/extracted-data.html", {"pdf_document": pdf_document, "table_rows": table_rows})
 
 
+REPORT_PERIODS = {
+    "daily": ("Daily Report", 0),
+    "weekly": ("Weekly Report", 6),
+    "monthly": ("Monthly Report", 29),
+    "quarterly": ("Quarterly Report", 89),
+}
+
+
+def _pdf_text(value):
+    """Escape plain text for a minimal, dependency-free PDF document."""
+    return str(value).replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+
+
+def _make_report_pdf(title, date_from, date_to, documents):
+    total_companies = ExtractedCompanyRecord.objects.filter(
+        pdf_document__in=documents
+    ).values("symbol").distinct().count()
+    # Keep the report useful even when no files have been processed yet.
+    lines = [
+        "PSX Daily Market Intelligence Engine",
+        title,
+        f"Period: {date_from:%d-%b-%Y} to {date_to:%d-%b-%Y}",
+        f"Processed market files: {documents.count()}",
+        f"Unique companies: {total_companies}",
+        "Generated from the market data currently available in the system.",
+    ]
+    stream_lines = ["BT", "/F1 16 Tf", "72 760 Td"]
+    for index, line in enumerate(lines):
+        if index:
+            stream_lines.append("0 -28 Td")
+        stream_lines.append(f"({_pdf_text(line)}) Tj")
+    stream_lines.append("ET")
+    stream = "\n".join(stream_lines).encode("latin-1", "replace")
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream",
+    ]
+    output = bytearray(b"%PDF-1.4\n")
+    offsets = [0]
+    for number, obj in enumerate(objects, start=1):
+        offsets.append(len(output))
+        output.extend(f"{number} 0 obj\n".encode())
+        output.extend(obj)
+        output.extend(b"\nendobj\n")
+    xref_offset = len(output)
+    output.extend(f"xref\n0 {len(objects) + 1}\n0000000000 65535 f \n".encode())
+    for offset in offsets[1:]:
+        output.extend(f"{offset:010d} 00000 n \n".encode())
+    output.extend(f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF".encode())
+    return bytes(output)
+
+
 def reports(request):
-    return render(request, "pages/reports.html")
+    selected_type = (request.GET.get("type") or "daily").lower()
+    if selected_type not in REPORT_PERIODS:
+        selected_type = "daily"
+
+    if request.method == "POST":
+        report_type = (request.POST.get("report_type") or selected_type).lower()
+        if report_type not in REPORT_PERIODS:
+            messages.error(request, "Please select a valid report type.")
+            return redirect("reports")
+
+        report_name, days_back = REPORT_PERIODS[report_type]
+        latest_pdf = _get_latest_pdf_for_date()
+        date_to = latest_pdf.report_date if latest_pdf and latest_pdf.report_date else datetime.today().date()
+        date_from = date_to - timedelta(days=days_back)
+        documents = PDFDocument.objects.filter(
+            is_processed=True, report_date__range=(date_from, date_to)
+        )
+        report = GeneratedReport(
+            report_type=report_type,
+            name=report_name,
+            date_from=date_from,
+            date_to=date_to,
+        )
+        filename = f"{report_type}-market-report-{date_to:%Y%m%d}.pdf"
+        report.file.save(filename, ContentFile(_make_report_pdf(report_name, date_from, date_to, documents)), save=False)
+        report.save()
+        messages.success(request, f"{report_name} generated successfully.")
+        return redirect(f"{request.path}?type={report_type}")
+
+    # Build available dates for the topbar date selector from scraped PDF data
+    available_dates = list(
+        PDFDocument.objects.filter(report_date__isnull=False)
+        .values_list("report_date", flat=True)
+        .order_by("-report_date")
+        .distinct()
+    )
+
+    # Handle selected date from GET parameter
+    selected_date = _parse_report_date(request.GET.get("date"))
+    if selected_date is None and available_dates:
+        selected_date = available_dates[0]
+
+    selected_iso = selected_date.isoformat() if selected_date else None
+
+    # Filter recent reports by selected date if provided
+    recent_reports = GeneratedReport.objects.all()
+    if selected_date is not None:
+        recent_reports = recent_reports.filter(date_to=selected_date)
+    recent_reports = recent_reports[:10]
+
+    context = {
+        "selected_type": selected_type,
+        "report_types": REPORT_PERIODS,
+        "recent_reports": recent_reports,
+        "latest_pdf": _get_latest_pdf_for_date(),
+        "available_dates": [
+            {"iso": d.isoformat(), "display": d.strftime("%d-%b-%Y")}
+            for d in available_dates
+        ],
+        "selected_iso": selected_iso,
+    }
+    return render(request, "pages/reports.html", context)
+
+
+def download_report(request, pk):
+    report = get_object_or_404(GeneratedReport, pk=pk)
+    return FileResponse(report.file.open("rb"), as_attachment=True, filename=Path(report.file.name).name)
 
 
 def search_screener(request):
