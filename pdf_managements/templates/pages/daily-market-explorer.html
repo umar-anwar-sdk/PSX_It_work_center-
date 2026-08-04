@@ -60,12 +60,12 @@
         <main class="content">
           <section class="card">
             <div class="section-row">
-              <a class="button" href="{% url 'daily-market-explorer' %}?status=top50{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}">Top 50 Volume Leaders</a>
-              <a class="outline-button" href="{% url 'daily-market-explorer' %}?status=new{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}">Newly Added <span class="badge primary">{{ new_count }}</span></a>
-              <a class="outline-button" href="{% url 'daily-market-explorer' %}?status=removed{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}">Removed <span class="badge danger">{{ removed_count }}</span></a>
-              <a class="outline-button" href="{% url 'daily-market-explorer' %}?status=existing{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}">Existing <span class="badge success">{{ existing_count }}</span></a>
-              <a class="outline-button" href="{% url 'daily-market-explorer' %}{% if selected_date %}?date={{ selected_date|date:'Y-m-d' }}{% endif %}">All Companies</a>
-              <a class="outline-button" href="{% url 'daily-market-explorer' %}?status=top50{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}">Date Wise History</a>
+              <a class="{% if selected_status == 'top50' %}button{% else %}outline-button{% endif %}" href="{% url 'daily-market-explorer' %}?status=top50{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}">Top 50 Volume Leaders</a>
+              <a class="{% if selected_status == 'new' %}button{% else %}outline-button{% endif %}" href="{% url 'daily-market-explorer' %}?status=new{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}">Newly Added <span class="badge primary">{{ new_count }}</span></a>
+              <a class="{% if selected_status == 'removed' %}button{% else %}outline-button{% endif %}" href="{% url 'daily-market-explorer' %}?status=removed{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}">Removed <span class="badge danger">{{ removed_count }}</span></a>
+              <a class="{% if selected_status == 'existing' %}button{% else %}outline-button{% endif %}" href="{% url 'daily-market-explorer' %}?status=existing{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}">Existing <span class="badge success">{{ existing_count }}</span></a>
+              <a class="{% if selected_status == 'all' or not selected_status %}button{% else %}outline-button{% endif %}" href="{% url 'daily-market-explorer' %}{% if selected_date %}?date={{ selected_date|date:'Y-m-d' }}{% endif %}">All Companies</a>
+              <a class="{% if selected_status == 'top50' %}button{% else %}outline-button{% endif %}" href="{% url 'daily-market-explorer' %}?status=top50{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}">Date Wise History</a>
             </div>
           </section>
           <section class="card table-card">

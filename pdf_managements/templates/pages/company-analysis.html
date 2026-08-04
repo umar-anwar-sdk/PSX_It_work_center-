@@ -5,7 +5,19 @@
   <header class="topbar">
     <button class="icon-button mobile-menu" data-mobile-menu>☰</button>
     <div><h1>Company Analysis</h1><p>Detailed analysis, history, trends and momentum</p></div>
-    <div class="topbar-actions"><button class="outline-button">{% if company %}{{ company.pdf_document.report_date|date:"d-M-Y" }}{% else %}Latest saved data{% endif %}</button><button class="icon-button" data-theme-toggle>☀</button></div>
+    <div class="topbar-actions">
+            <form method="get" style="display:inline-flex; align-items:center; gap:0.5rem;">
+              <select name="date" class="outline-button" onchange="this.form.submit()">
+                {% for available_date in available_dates %}
+                  <option value="{{ available_date|date:'Y-m-d' }}" {% if selected_date == available_date %}selected{% endif %}>{{ available_date|date:'d-M-Y' }}</option>
+                {% endfor %}
+              </select>
+              {% if selected_status and selected_status != 'all' %}
+                <input type="hidden" name="status" value="{{ selected_status }}" />
+              {% endif %}
+            </form>
+            <button class="icon-button" data-theme-toggle>☀</button>
+          </div>
   </header>
   <main class="content">
     <form class="section-row" method="get">
@@ -39,7 +51,7 @@
         <div class="metric"><div class="label">Latest Price</div><div class="value">{% if company.price is not None %}{{ company.price|floatformat:2 }}{% else %}—{% endif %}</div><div class="helper">Latest saved session</div></div>
         <div class="metric"><div class="label">Saved Sessions</div><div class="value">{{ history|length }}</div><div class="helper">Available history</div></div>
       </div></article>
-      <article class="card chart-card"><div class="card-header"><h2 class="card-title">Price History (Saved Sessions)</h2></div><div class="bar-chart">{% for point in chart_points %}<div class="bar" style="height: {{ point.height }}%"><span>{{ point.label }}</span></div>{% empty %}<div style="color:var(--muted-foreground);">No saved price history available.</div>{% endfor %}</div></article>
+      <article class="card chart-card"><div class="card-header"><h2 class="card-title">Price History (Saved Sessions)</h2></div><div class="bar-chart">{% for point in chart_points %}<div class="bar" style="height: {{ point.height }}%" title="{{ point.label }}: {{ point.price }}"><span>{{ point.label }}</span></div>{% empty %}<div style="color:var(--muted-foreground);">No saved price history available.</div>{% endfor %}</div></article>
       <article class="card"><div class="card-header"><h2 class="card-title">Company Quick Info</h2></div><div style="display:flex;flex-direction:column;gap:.65rem;color:var(--muted-foreground);font-size:.95rem;"><p>Latest saved date: {% if company %}{{ company.pdf_document.report_date|date:"d-M-Y" }}{% else %}—{% endif %}</p><p>Previous close: {% if previous_record %}{{ previous_record.price|floatformat:2 }}{% else %}—{% endif %}</p><p>Saved sessions: {{ history|length }}</p><p>Symbol: {% if company %}{{ company.symbol }}{% else %}—{% endif %}</p></div></article>
     </section>
 

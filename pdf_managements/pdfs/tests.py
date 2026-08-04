@@ -127,6 +127,49 @@ class DailyMarketExplorerViewTests(TestCase):
         self.assertEqual(list(response.context["companies"].values_list("symbol", flat=True)), ["C"])
 
 
+class CompanyAnalysisViewTests(TestCase):
+    def setUp(self):
+        self.pdf_18 = self._create_pdf("pdf-18", date(2026, 7, 18), time(9, 0))
+        self.pdf_19 = self._create_pdf("pdf-19", date(2026, 7, 19), time(9, 0))
+        self._create_company(self.pdf_18, "A", "Alpha", 1000)
+        self._create_company(self.pdf_19, "B", "Beta", 500)
+
+    def _create_pdf(self, name, report_date, report_time):
+        return PDFDocument.objects.create(
+            name=name,
+            file=SimpleUploadedFile(f"{name}.pdf", b"pdf-content", content_type="application/pdf"),
+            report_date=report_date,
+            report_time=report_time,
+            is_processed=True,
+        )
+
+    def _create_company(self, pdf_document, symbol, company_name, volume):
+        return ExtractedCompanyRecord.objects.create(
+            pdf_document=pdf_document,
+            company_name=company_name,
+            symbol=symbol,
+            price=10,
+            change_value=1,
+            change_percent=1,
+            volume=volume,
+        )
+
+    def test_date_dropdown_is_populated_and_selected(self):
+        response = self.client.get(reverse("company-analysis"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["selected_date"], date(2026, 7, 19))
+        self.assertEqual(response.context["available_dates"], [date(2026, 7, 19), date(2026, 7, 18)])
+        self.assertEqual(response.context["company"].pdf_document, self.pdf_19)
+
+    def test_date_filter_uses_selected_report_date(self):
+        response = self.client.get(reverse("company-analysis"), {"date": "2026-07-18"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["selected_date"], date(2026, 7, 18))
+        self.assertEqual(response.context["company"].pdf_document, self.pdf_18)
+
+
 class ReportsViewTests(TestCase):
     def test_generates_and_downloads_a_selected_report(self):
         pdf = PDFDocument.objects.create(

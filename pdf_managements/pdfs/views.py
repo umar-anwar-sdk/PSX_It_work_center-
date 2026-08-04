@@ -33,21 +33,42 @@ def company_analysis(request):
     no duplicate company data needs to be saved for this screen.
     """
     search_query = (request.GET.get("q") or "").strip()
-    records = ExtractedCompanyRecord.objects.select_related("pdf_document").filter(
+    requested_date = request.GET.get("date") or request.GET.get("report_date") or request.GET.get("selected_date")
+    selected_date = _parse_report_date(requested_date)
+
+    available_dates = list(
+        PDFDocument.objects.filter(report_date__isnull=False)
+        .values_list("report_date", flat=True)
+        .order_by("-report_date")
+        .distinct()
+    )
+
+    if selected_date is not None:
+        selected_pdf = _get_latest_pdf_for_date(selected_date)
+        if selected_pdf is None:
+            selected_date = None
+    else:
+        selected_pdf = _get_latest_pdf_for_date()
+        selected_date = selected_pdf.report_date if selected_pdf is not None else None
+
+    all_records = ExtractedCompanyRecord.objects.select_related("pdf_document").filter(
         pdf_document__is_processed=True
     )
+    records = all_records
+    if selected_date is not None:
+        records = records.filter(pdf_document__report_date=selected_date)
 
     selected_record = None
     if search_query:
-        selected_record = records.filter(symbol__iexact=search_query).order_by(
+        selected_record = all_records.filter(symbol__iexact=search_query).order_by(
             "-pdf_document__report_date", "-pdf_document__uploaded_at"
         ).first()
         if selected_record is None:
-            selected_record = records.filter(symbol__icontains=search_query).order_by(
+            selected_record = all_records.filter(symbol__icontains=search_query).order_by(
                 "-pdf_document__report_date", "-pdf_document__uploaded_at"
             ).first()
         if selected_record is None:
-            selected_record = records.filter(company_name__icontains=search_query).order_by(
+            selected_record = all_records.filter(company_name__icontains=search_query).order_by(
                 "-pdf_document__report_date", "-pdf_document__uploaded_at"
             ).first()
     else:
@@ -60,7 +81,7 @@ def company_analysis(request):
     chart_points = []
     if selected_record is not None:
         history = list(
-            records.filter(symbol__iexact=selected_record.symbol).order_by(
+            all_records.filter(symbol__iexact=selected_record.symbol).order_by(
                 "-pdf_document__report_date", "-pdf_document__uploaded_at"
             )
         )
@@ -69,11 +90,15 @@ def company_analysis(request):
         chart_records = list(reversed(history[:6]))
         prices = [record.price for record in chart_records if record.price is not None]
         highest_price = max(prices) if prices else None
-        for index, record in enumerate(chart_records, start=1):
+        for record in chart_records:
             height = 10
             if highest_price and record.price is not None:
                 height = max(10, int((record.price / highest_price) * 100))
-            chart_points.append({"label": index, "height": height})
+            chart_points.append({
+                "label": record.pdf_document.report_date.strftime("%d-%b"),
+                "height": height,
+                "price": record.price,
+            })
 
     if request.GET.get("download") == "csv" and selected_record is not None:
         response = HttpResponse(content_type="text/csv")
@@ -100,6 +125,8 @@ def company_analysis(request):
         "history": history[:10],
         "chart_points": chart_points,
         "result_not_found": bool(search_query and selected_record is None),
+        "selected_date": selected_date,
+        "available_dates": available_dates,
     }
     return render(request, "pages/company-analysis.html", context)
 
