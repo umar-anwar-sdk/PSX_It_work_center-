@@ -121,7 +121,7 @@
             <div class="card-header">
               <h2 class="card-title">Sector Performance</h2>
             </div>
-            <div class="bar-chart">{% for sector in sector_data %}<div class="bar" style="height: {{ sector.height }}%"><span>{{ sector.name }}</span></div>{% empty %}<p>No sector data available.</p>{% endfor %}</div>
+            <div class="bar-chart" style="overflow-x:auto; overflow-y:hidden; padding-bottom:0.5rem;">{% for sector in sector_data %}<div class="bar" style="height: {{ sector.height }}%"><span>{{ sector.name }}</span></div>{% empty %}<p>No sector data available.</p>{% endfor %}</div>
           </article>
           <article class="card" id="heat-map">
             <div class="card-header">
@@ -129,7 +129,7 @@
             </div>
             <div class="grid grid-3">
               {% for sector in sector_counts %}
-                <div class="info-block" style="background:rgba({{ sector.color }},{{ sector.opacity }});">
+                <div class="info-block" style="background:rgba({{ sector.color }},{{ sector.opacity }}); max-height: 180px; overflow:auto;">
                   <strong>{{ sector.name }}</strong>
                   <div style="margin:.5rem 0; font-size:.95rem;">Count: {{ sector.count }}</div>
                   <div style="font-size:.9rem;">Avg change: {% if sector.change_percent >= 0 %}+{% endif %}{{ sector.change_percent|floatformat:2 }}%</div>

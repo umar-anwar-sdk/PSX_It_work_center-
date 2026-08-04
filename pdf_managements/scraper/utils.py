@@ -79,6 +79,49 @@ def extract_report_datetime(pdf_path):
     return report_date, report_time
 
 
+def _looks_like_sector_token(token):
+    if not token or token in {"-", "--"}:
+        return False
+
+    if token.isupper() and len(token) <= 20:
+        return True
+
+    if any(char in token for char in "/&."):
+        return True
+
+    if re.fullmatch(r"[A-Z0-9]+", token):
+        return True
+
+    return False
+
+
+def _split_company_and_sector(prefix_tokens):
+    if not prefix_tokens:
+        return "", ""
+
+    cleaned_tokens = [token for token in prefix_tokens if token not in {"-", "--"}]
+    if not cleaned_tokens:
+        return "", ""
+
+    if len(cleaned_tokens) == 1:
+        return cleaned_tokens[0], ""
+
+    for size in range(len(cleaned_tokens), 0, -1):
+        candidate_tokens = cleaned_tokens[-size:]
+        if not candidate_tokens:
+            continue
+
+        if size >= 2 and all(_looks_like_sector_token(token) for token in candidate_tokens):
+            company_tokens = cleaned_tokens[:-size]
+            return " ".join(company_tokens).strip(), " ".join(candidate_tokens).strip()
+
+        if size == 1 and _looks_like_sector_token(candidate_tokens[0]):
+            company_tokens = cleaned_tokens[:-1]
+            return " ".join(company_tokens).strip(), candidate_tokens[0].strip()
+
+    return " ".join(cleaned_tokens).strip(), ""
+
+
 def parse_pdf_text(text):
     records = []
     lines = [clean_text(line) for line in text.splitlines() if clean_text(line)]
@@ -93,41 +136,51 @@ def parse_pdf_text(text):
         if "page" in line.lower() and "http" in line.lower():
             continue
 
-        if re.match(r"^\d+\s+[A-Z]{2,}\s+", line):
-            parts = line.split()
-            if len(parts) < 7:
-                continue
+        parts = line.split()
+        if not parts:
+            continue
 
-            symbol = parts[1]
-            company_name = parts[2]
-            sector = " ".join(parts[3:-5])
-            price_text = parts[-5]
-            change_text = parts[-4]
-            change_percent_text = parts[-3]
-            volume_text = parts[-2]
-            trend = parts[-1]
+        if parts[0].isdigit():
+            parts = parts[1:]
 
-            company_name = company_name if company_name != "Unknown" else ""
-            if not company_name:
-                continue
+        if len(parts) < 6:
+            continue
 
-            cleaned_percent = change_percent_text.replace("%", "")
-            cleaned_volume = volume_text.replace(",", "")
-            cleaned_change = re.sub(r"[^0-9.-]", "", change_text)
+        symbol = parts[0]
+        if len(parts) < 6:
+            continue
 
-            try:
-                records.append(
-                    {
-                        "company_name": company_name,
-                        "symbol": symbol,
-                        "price": Decimal(price_text),
-                        "change_value": Decimal(cleaned_change),
-                        "change_percent": Decimal(cleaned_percent),
-                        "volume": int(cleaned_volume),
-                    }
-                )
-            except Exception:
-                continue
+        price_text = parts[-5]
+        change_text = parts[-4]
+        change_percent_text = parts[-3]
+        volume_text = parts[-2]
+        trend = parts[-1]
+
+        prefix_tokens = parts[1:-5]
+        company_name, sector = _split_company_and_sector(prefix_tokens)
+
+        company_name = company_name if company_name != "Unknown" else ""
+        if not company_name:
+            continue
+
+        cleaned_percent = change_percent_text.replace("%", "")
+        cleaned_volume = volume_text.replace(",", "")
+        cleaned_change = re.sub(r"[^0-9.-]", "", change_text)
+
+        try:
+            records.append(
+                {
+                    "company_name": company_name,
+                    "symbol": symbol,
+                    "sector": sector,
+                    "price": Decimal(price_text),
+                    "change_value": Decimal(cleaned_change),
+                    "change_percent": Decimal(cleaned_percent),
+                    "volume": int(cleaned_volume),
+                }
+            )
+        except Exception:
+            continue
 
     logger.info("Parsed %s company rows from PDF text", len(records))
     return records
@@ -161,6 +214,7 @@ def save_extracted_data(pdf_document, records):
             pdf_document=pdf_document,
             company_name=record.get("company_name", ""),
             symbol=record.get("symbol", ""),
+            sector=record.get("sector", ""),
             price=record.get("price"),
             change_value=record.get("change_value"),
             change_percent=record.get("change_percent"),
@@ -214,6 +268,7 @@ def get_table_data(records):
             record = item
             payload = {
                 "company_name": record.company_name,
+                "sector": getattr(record, "sector", ""),
                 "symbol": record.symbol,
                 "price": record.price,
                 "change_value": record.change_value,
@@ -226,6 +281,7 @@ def get_table_data(records):
         rows.append(
             {
                 "company_name": payload.get("company_name", ""),
+                "sector": payload.get("sector", ""),
                 "symbol": payload.get("symbol", ""),
                 "price": format_decimal(payload.get("price")),
                 "change_value": format_decimal(payload.get("change_value")),

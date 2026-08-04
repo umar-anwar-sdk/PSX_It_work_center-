@@ -66,7 +66,7 @@
           <section class="grid grid-3">
             <article class="card"><div class="card-header"><h2 class="card-title">Biggest Gainers</h2></div><div class="list-stack">{% for stock in biggest_gainers %}<p class="badge success" style="width:fit-content;">{{ stock.symbol }} +{{ stock.change_percent|floatformat:2 }}%</p>{% empty %}<p>No gainers found.</p>{% endfor %}</div></article>
             <article class="card"><div class="card-header"><h2 class="card-title">New &amp; Removed Comparison</h2></div><div class="grid" style="grid-template-columns:1fr 1fr;gap:1rem;"><div><strong>Newly Added</strong>{% for stock in new_entries %}<p>{{ stock.symbol }}</p>{% empty %}<p>None</p>{% endfor %}</div><div><strong>Removed</strong>{% for stock in removed_entries %}<p>{{ stock.symbol }}</p>{% empty %}<p>None</p>{% endfor %}</div></div></article>
-            <article class="card chart-card"><div class="card-header"><h2 class="card-title">Sector Comparison</h2></div><div class="bar-chart">{% for sector in sector_rows %}<div class="bar" style="height: {{ sector.height }}%"><span>{{ sector.label }}</span></div>{% empty %}<p>No sector data available.</p>{% endfor %}</div></article>
+            <article class="card chart-card"><div class="card-header"><h2 class="card-title">Sector Comparison</h2></div><div class="bar-chart" style="overflow-x:auto; overflow-y:hidden; padding-bottom:0.5rem;">{% for sector in sector_rows %}<div class="bar" style="height: {{ sector.height }}%"><span>{{ sector.label }}</span></div>{% empty %}<p>No sector data available.</p>{% endfor %}</div></article>
           </section>
         </main>
       </div>

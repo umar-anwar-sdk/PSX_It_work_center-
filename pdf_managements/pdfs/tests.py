@@ -7,6 +7,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from scraper.models import ComparisonResult, ExtractedCompanyRecord, GeneratedReport, PDFDocument
+from scraper.utils import get_table_data, parse_pdf_text
 
 from .models import ScrapedRecord
 from .views import import_data_from_folder
@@ -48,6 +49,38 @@ class ScraperImportTests(TestCase):
         self.assertEqual(imported_count, 2)
         self.assertEqual(ScrapedRecord.objects.count(), 2)
         self.assertEqual(ScrapedRecord.objects.get(symbol='CNERGY').company, 'Cnergyico PK Limited')
+
+
+class PDFParsingTests(TestCase):
+    def test_get_table_data_includes_sector_for_rendering(self):
+        rows = get_table_data([
+            {
+                "company_name": "Pak Elektron Limited",
+                "sector": "CABLE & WIRE",
+                "symbol": "APL",
+                "price": 10.5,
+                "change_value": 0.2,
+                "change_percent": 2.0,
+                "volume": 5000000,
+            }
+        ])
+
+        self.assertEqual(rows[0]["sector"], "CABLE & WIRE")
+
+    def test_parse_pdf_text_keeps_company_name_and_sector_separate(self):
+        sample_text = """
+        1 APL Pak Elektron Limited CABLE & WIRE 10.50 0.20 +2.00% 5,000,000 Up
+        2 NML MCB Bank Limited BANKS / SECURITIES 15.00 -0.10 -0.67% 2,000,000 Down
+        """
+
+        records = parse_pdf_text(sample_text)
+
+        self.assertEqual(len(records), 2)
+        self.assertEqual(records[0]["symbol"], "APL")
+        self.assertEqual(records[0]["company_name"], "Pak Elektron Limited")
+        self.assertEqual(records[0]["sector"], "CABLE & WIRE")
+        self.assertEqual(records[1]["company_name"], "MCB Bank Limited")
+        self.assertEqual(records[1]["sector"], "BANKS / SECURITIES")
 
 
 class DailyMarketExplorerViewTests(TestCase):

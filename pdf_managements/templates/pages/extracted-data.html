@@ -75,6 +75,23 @@
                 {% endfor %}
               </tbody>
             </table>
+            {% if paginator and paginator.num_pages > 1 %}
+            <div class="card-header" style="margin-top:1rem;justify-content:center;">
+              <nav aria-label="Pagination">
+                <ul class="pagination" style="display:flex;gap:0.5rem;list-style:none;padding:0;margin:0;">
+                  {% if page_obj.has_previous %}
+                  <li><a class="outline-button" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+                  {% endif %}
+                  {% for num in paginator.page_range %}
+                  <li><a class="outline-button" href="?page={{ num }}">{{ num }}</a></li>
+                  {% endfor %}
+                  {% if page_obj.has_next %}
+                  <li><a class="outline-button" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+                  {% endif %}
+                </ul>
+              </nav>
+            </div>
+            {% endif %}
             {% else %}
             <p>No extracted rows are available yet.</p>
             {% endif %}

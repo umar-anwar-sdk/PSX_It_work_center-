@@ -5,6 +5,7 @@ import csv
 from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
+from types import SimpleNamespace
 
 from django.contrib import messages
 from django.core.files.base import ContentFile
@@ -19,6 +20,37 @@ from scraper.utils import get_file_hash, get_table_data, process_pdf_document
 from .models import ScrapedRecord
 
 logger = logging.getLogger(__name__)
+
+
+class CompanyCollection(list):
+    def values_list(self, *fields, flat=False):
+        if not fields:
+            return []
+
+        field_name = fields[0]
+        if flat:
+            return [getattr(item, field_name, None) for item in self]
+
+        return [tuple(getattr(item, field_name, None) for field_name in fields) for item in self]
+
+
+def _as_company_row(record, status=""):
+    if isinstance(record, dict):
+        payload = dict(record)
+    else:
+        payload = {
+            "company_name": getattr(record, "company_name", ""),
+            "symbol": getattr(record, "symbol", ""),
+            "sector": getattr(record, "sector", ""),
+            "price": getattr(record, "price", None),
+            "change_value": getattr(record, "change_value", None),
+            "change_percent": getattr(record, "change_percent", None),
+            "volume": getattr(record, "volume", None),
+        }
+
+    row = SimpleNamespace(**payload)
+    row.status = status
+    return row
 
 
 def home(request):
@@ -79,6 +111,8 @@ def company_analysis(request):
     history = []
     previous_record = None
     chart_points = []
+    history_page_obj = None
+    history_paginator = None
     if selected_record is not None:
         history = list(
             all_records.filter(symbol__iexact=selected_record.symbol).order_by(
@@ -86,6 +120,11 @@ def company_analysis(request):
             )
         )
         previous_record = history[1] if len(history) > 1 else None
+
+        history_paginator = Paginator(history, 5)
+        page_number = request.GET.get("page", 1)
+        history_page_obj = history_paginator.get_page(page_number)
+        history = list(history_page_obj.object_list)
 
         chart_records = list(reversed(history[:6]))
         prices = [record.price for record in chart_records if record.price is not None]
@@ -122,7 +161,9 @@ def company_analysis(request):
         "search_query": search_query,
         "company": selected_record,
         "previous_record": previous_record,
-        "history": history[:10],
+        "history": history,
+        "history_page_obj": history_page_obj,
+        "history_paginator": history_paginator,
         "chart_points": chart_points,
         "result_not_found": bool(search_query and selected_record is None),
         "selected_date": selected_date,
@@ -302,6 +343,7 @@ def daily_market_explorer(request):
                 "pdf_document_id",
                 "company_name",
                 "symbol",
+                "sector",
                 "price",
                 "change_value",
                 "change_percent",
@@ -320,6 +362,7 @@ def daily_market_explorer(request):
                     "pdf_document_id",
                     "company_name",
                     "symbol",
+                    "sector",
                     "price",
                     "change_value",
                     "change_percent",
@@ -334,6 +377,7 @@ def daily_market_explorer(request):
             filtered_records = [
                 {
                     "company_name": current_lookup[symbol].company_name,
+                    "sector": current_lookup[symbol].sector,
                     "symbol": symbol,
                     "price": current_lookup[symbol].price,
                     "change_value": current_lookup[symbol].change_value,
@@ -348,6 +392,7 @@ def daily_market_explorer(request):
             filtered_records = [
                 {
                     "company_name": previous_lookup[symbol].company_name,
+                    "sector": previous_lookup[symbol].sector,
                     "symbol": symbol,
                     "price": previous_lookup[symbol].price,
                     "change_value": previous_lookup[symbol].change_value,
@@ -362,6 +407,7 @@ def daily_market_explorer(request):
             filtered_records = [
                 {
                     "company_name": current_lookup[symbol].company_name,
+                    "sector": current_lookup[symbol].sector,
                     "symbol": symbol,
                     "price": current_lookup[symbol].price,
                     "change_value": current_lookup[symbol].change_value,
@@ -376,6 +422,7 @@ def daily_market_explorer(request):
             filtered_records = [
                 {
                     "company_name": record.company_name,
+                    "sector": record.sector,
                     "symbol": record.symbol,
                     "price": record.price,
                     "change_value": record.change_value,
@@ -388,7 +435,10 @@ def daily_market_explorer(request):
 
         paginator = Paginator(filtered_records, 10)
         page_obj = paginator.get_page(page_number)
-        companies = list(page_obj.object_list)
+        companies = CompanyCollection([
+            _as_company_row(record, status=getattr(record, "status", ""))
+            for record in page_obj.object_list
+        ])
 
         total_companies = len(current_records)
         top50_count = min(total_companies, 50)
@@ -455,11 +505,16 @@ def market_analysis(request):
     biggest_loser = min(price_down, key=lambda record: record.change_percent, default=None)
 
     sector_values = {}
-    if selected_pdf and selected_pdf.report_date:
-        for record in ScrapedRecord.objects.filter(date=selected_pdf.report_date).exclude(sector=""):
-            raw_change = (record.change_percent or "").replace("%", "").replace("+", "").strip()
+    if selected_pdf:
+        for record in selected_pdf.extracted_companies.all():
+            sector_name = (record.sector or "").strip()
+            if not sector_name:
+                continue
+            raw_change = record.change_percent
+            if raw_change is None:
+                continue
             try:
-                sector_values.setdefault(record.sector, []).append(Decimal(raw_change))
+                sector_values.setdefault(sector_name, []).append(Decimal(str(raw_change)))
             except ArithmeticError:
                 continue
 
@@ -537,10 +592,13 @@ def market_comparison(request):
         return round((count / comparable_total) * 100) if comparable_total else 0
 
     sector_rows = []
-    if current_pdf and current_pdf.report_date:
+    if current_pdf:
         sector_counts = {}
-        for record in ScrapedRecord.objects.filter(date=current_pdf.report_date).exclude(sector=""):
-            sector_counts[record.sector] = sector_counts.get(record.sector, 0) + 1
+        for record in current_pdf.extracted_companies.all():
+            sector_name = (record.sector or "").strip()
+            if not sector_name:
+                continue
+            sector_counts[sector_name] = sector_counts.get(sector_name, 0) + 1
         largest_sector_count = max(sector_counts.values(), default=0)
         sector_rows = [
             {"label": sector, "height": round((count / largest_sector_count) * 100)}
@@ -618,13 +676,38 @@ def pdf_management(request):
                 return redirect("pdf-management")
 
     pdf_documents = PDFDocument.objects.order_by("-uploaded_at")
-    return render(request, "pages/pdf-management.html", {"form": form, "pdf_documents": pdf_documents})
+    paginator = Paginator(pdf_documents, 5)
+    page_number = request.GET.get("page", 1)
+    page_obj = paginator.get_page(page_number)
+    return render(
+        request,
+        "pages/pdf-management.html",
+        {
+            "form": form,
+            "pdf_documents": page_obj.object_list,
+            "page_obj": page_obj,
+            "paginator": paginator,
+        },
+    )
 
 
 def pdf_details(request, pk):
     pdf_document = get_object_or_404(PDFDocument, pk=pk)
-    table_rows = get_table_data(pdf_document.extracted_companies.all())
-    return render(request, "pages/extracted-data.html", {"pdf_document": pdf_document, "table_rows": table_rows})
+    rows = list(pdf_document.extracted_companies.all())
+    paginator = Paginator(rows, 10)
+    page_number = request.GET.get("page", 1)
+    page_obj = paginator.get_page(page_number)
+    table_rows = get_table_data(page_obj.object_list)
+    return render(
+        request,
+        "pages/extracted-data.html",
+        {
+            "pdf_document": pdf_document,
+            "table_rows": table_rows,
+            "page_obj": page_obj,
+            "paginator": paginator,
+        },
+    )
 
 
 REPORT_PERIODS = {
