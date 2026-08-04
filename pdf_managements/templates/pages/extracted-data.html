@@ -53,6 +53,7 @@
               <thead>
                 <tr>
                   <th>Company</th>
+                  <th>Sector</th>
                   <th>Symbol</th>
                   <th>Price</th>
                   <th>Change</th>
@@ -64,6 +65,7 @@
                 {% for row in table_rows %}
                 <tr>
                   <td>{{ row.company_name }}</td>
+                  <td>{{ row.sector }}</td>
                   <td>{{ row.symbol }}</td>
                   <td>{{ row.price }}</td>
                   <td>{{ row.change_value }}</td>

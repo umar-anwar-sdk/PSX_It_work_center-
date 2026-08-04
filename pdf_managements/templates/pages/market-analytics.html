@@ -125,9 +125,19 @@
           </article>
           <article class="card" id="heat-map">
             <div class="card-header">
-              <h2 class="card-title">Heat Map (by % Change)</h2>
+              <h2 class="card-title">Sector Frequency Heatmap</h2>
             </div>
-            <div class="grid grid-3">{% for sector in sector_data %}<div class="info-block" style="background:{% if sector.change_percent >= 0 %}rgba(22,163,74,.12);color:var(--success){% else %}rgba(220,38,38,.12);color:var(--danger){% endif %};">{{ sector.name }}<br />{% if sector.change_percent > 0 %}+{% endif %}{{ sector.change_percent|floatformat:2 }}%</div>{% empty %}<p>No sector data available.</p>{% endfor %}</div>
+            <div class="grid grid-3">
+              {% for sector in sector_counts %}
+                <div class="info-block" style="background:rgba({{ sector.color }},{{ sector.opacity }});">
+                  <strong>{{ sector.name }}</strong>
+                  <div style="margin:.5rem 0; font-size:.95rem;">Count: {{ sector.count }}</div>
+                  <div style="font-size:.9rem;">Avg change: {% if sector.change_percent >= 0 %}+{% endif %}{{ sector.change_percent|floatformat:2 }}%</div>
+                </div>
+              {% empty %}
+                <p>No sector data available.</p>
+              {% endfor %}
+            </div>
           </article>
           <article class="card chart-card" id="market-breadth">
             <div class="card-header">

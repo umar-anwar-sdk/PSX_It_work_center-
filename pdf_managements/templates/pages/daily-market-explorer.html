@@ -72,7 +72,7 @@
             <div class="card-header"><h2 class="card-title">{{ selected_pdf.name|default:'No PDF Selected' }}</h2></div>
             <table>
               <thead>
-                <tr><th>Symbol</th><th>Company</th><th>Price</th><th>Change Value</th><th>Change %</th><th>Volume</th><th>Status</th><th>Action</th></tr>
+                <tr><th>Symbol</th><th>Company</th><th>Sector</th><th>Price</th><th>Change Value</th><th>Change %</th><th>Volume</th><th>Status</th><th>Action</th></tr>
               </thead>
               <tbody>
                 {% if companies %}
@@ -80,6 +80,7 @@
                     <tr>
                       <td><strong>{{ company.symbol }}</strong></td>
                       <td>{{ company.company_name }}</td>
+                      <td>{{ company.sector|default:'-' }}</td>
                       <td>{% if company.price is not None %}{{ company.price }}{% else %}-{% endif %}</td>
                       <td>{% if company.change_value is not None %}{{ company.change_value }}{% else %}-{% endif %}</td>
                       <td>{% if company.change_percent is not None %}{{ company.change_percent }}{% else %}-{% endif %}</td>
