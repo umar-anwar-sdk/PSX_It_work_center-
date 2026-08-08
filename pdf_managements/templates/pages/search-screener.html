@@ -44,19 +44,21 @@
             <p>Find stocks using advanced filters and create custom screens</p>
           </div>
           <div class="topbar-actions"><button class="outline-button">09-Jul-2026</button><button class="icon-button" data-theme-toggle>☀</button></div>
+          <style>.topbar-actions > button.outline-button { display:none; }</style>
+          <form method="get" class="topbar-actions"><input type="hidden" name="q" value="{{ filters.q }}" /><input type="hidden" name="sector" value="{{ filters.sector }}" /><input type="hidden" name="price" value="{{ filters.price }}" /><input type="hidden" name="change_percent" value="{{ filters.change_percent }}" /><input type="hidden" name="volume" value="{{ filters.volume }}" /><input class="outline-button" type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}" onchange="this.form.submit()" aria-label="Select report date" /></form>
         </header>
         <main class="content">
           <div class="grid" style="grid-template-columns:1fr 320px;align-items:start;">
             <div class="content" style="padding:0;gap:1rem;">
-              <section class="card">
+              <form class="card" method="get">
                 <div class="card-header"><h2 class="card-title">Advanced Filters</h2><div class="section-row"><button class="outline-button">↺ Reset</button><button class="button">🔎 Search</button></div></div>
                 <div class="form-grid">
-                  <label>Symbol / Company<input class="input" placeholder="Search..." /></label>
-                  <label>Sector<input class="input" placeholder="Any" /></label>
+                  <label>Symbol / Company<input class="input" name="q" value="{{ filters.q }}" placeholder="Search..." /></label>
+                  <label>Sector<input class="input" name="sector" value="{{ filters.sector }}" placeholder="Any" /></label>
                   <label>Market<input class="input" placeholder="Any" /></label>
-                  <label>Price (PKR)<input class="input" placeholder="Any" /></label>
-                  <label>Change %<input class="input" placeholder="Any" /></label>
-                  <label>Volume<input class="input" placeholder="Any" /></label>
+                  <label>Price (PKR)<input class="input" name="price" value="{{ filters.price }}" placeholder="Any" /></label>
+                  <label>Change %<input class="input" name="change_percent" value="{{ filters.change_percent }}" placeholder="Any" /></label>
+                  <label>Volume<input class="input" name="volume" value="{{ filters.volume }}" placeholder="Any" /></label>
                   <label>Value (PKR)<input class="input" placeholder="Any" /></label>
                   <label>Rank<input class="input" placeholder="Any" /></label>
                   <label>Momentum Score<input class="input" placeholder="Any" /></label>
@@ -65,10 +67,11 @@
                   <label>ROE (%)<input class="input" placeholder="Any" /></label>
                   <label style="grid-column:span 2;">Date Range<input class="input" value="02-Jul-2026  ->  09-Jul-2026" /></label>
                 </div>
-              </section>
+              </form>
               <section class="card table-card">
-                <div class="card-header"><h2 class="card-title">17 Search Results</h2></div>
-                <table><thead><tr><th>Symbol</th><th>Company</th><th>Sector</th><th>Price</th><th>Change %</th><th>Volume</th><th>Trend</th></tr></thead><tbody><tr><td><strong>CNERGY</strong></td><td>Cnergyico PK Limited</td><td>REFINERY</td><td>9.40</td><td class="badge success">+7.80%</td><td>211,683,514</td><td><span class="badge success">Up</span></td></tr><tr><td><strong>LSECL</strong></td><td>LSE Capital Limited</td><td>INV. BANKS / SECURITIES</td><td>7.84</td><td class="badge success">+14.62%</td><td>58,382,446</td><td><span class="badge success">Up</span></td></tr></tbody></table>
+                <div class="card-header"><h2 class="card-title">{{ result_count }} Search Results</h2></div>
+                <table><thead><tr><th>Symbol</th><th>Company</th><th>Sector</th><th>Price</th><th>Change %</th><th>Volume</th><th>Trend</th></tr></thead><tbody>{% for record in records %}<tr><td><strong>{{ record.symbol }}</strong></td><td>{{ record.company_name }}</td><td>{{ record.sector|default:'-' }}</td><td>{% if record.price is not None %}{{ record.price|floatformat:2 }}{% else %}-{% endif %}</td><td class="badge {% if record.change_percent is not None and record.change_percent < 0 %}danger{% else %}success{% endif %}">{% if record.change_percent is not None and record.change_percent > 0 %}+{% endif %}{{ record.change_percent|default:'-' }}{% if record.change_percent is not None %}%{% endif %}</td><td>{{ record.volume|default:'-' }}</td><td><span class="badge {% if record.change_percent is not None and record.change_percent < 0 %}danger{% else %}success{% endif %}">{% if record.change_percent is not None and record.change_percent < 0 %}Down{% else %}Up{% endif %}</span></td></tr>{% empty %}<tr><td colspan="7" style="text-align:center;color:var(--muted-foreground);">No matching stocks found.</td></tr>{% endfor %}</tbody></table>
+                {% if paginator.num_pages > 1 %}<div class="card-header" style="margin-top:1rem;justify-content:center;"><nav aria-label="Pagination"><ul class="pagination" style="display:flex;gap:0.5rem;list-style:none;padding:0;margin:0;">{% if page_obj.has_previous %}<li><a class="outline-button" href="?page={{ page_obj.previous_page_number }}{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}{% if filters.q %}&q={{ filters.q|urlencode }}{% endif %}{% if filters.sector %}&sector={{ filters.sector|urlencode }}{% endif %}{% if filters.price %}&price={{ filters.price|urlencode }}{% endif %}{% if filters.change_percent %}&change_percent={{ filters.change_percent|urlencode }}{% endif %}{% if filters.volume %}&volume={{ filters.volume|urlencode }}{% endif %}">Previous</a></li>{% endif %}{% for num in paginator.page_range %}<li><a class="outline-button pagination-link{% if num == page_obj.number %} active{% endif %}" href="?page={{ num }}{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}{% if filters.q %}&q={{ filters.q|urlencode }}{% endif %}{% if filters.sector %}&sector={{ filters.sector|urlencode }}{% endif %}{% if filters.price %}&price={{ filters.price|urlencode }}{% endif %}{% if filters.change_percent %}&change_percent={{ filters.change_percent|urlencode }}{% endif %}{% if filters.volume %}&volume={{ filters.volume|urlencode }}{% endif %}"{% if num == page_obj.number %} aria-current="page" style="background:#2563eb;color:#fff;border-color:#2563eb;"{% endif %}>{{ num }}</a></li>{% endfor %}{% if page_obj.has_next %}<li><a class="outline-button" href="?page={{ page_obj.next_page_number }}{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}{% if filters.q %}&q={{ filters.q|urlencode }}{% endif %}{% if filters.sector %}&sector={{ filters.sector|urlencode }}{% endif %}{% if filters.price %}&price={{ filters.price|urlencode }}{% endif %}{% if filters.change_percent %}&change_percent={{ filters.change_percent|urlencode }}{% endif %}{% if filters.volume %}&volume={{ filters.volume|urlencode }}{% endif %}">Next</a></li>{% endif %}</ul></nav></div>{% endif %}
               </section>
             </div>
             <aside class="content" style="padding:0;gap:1rem;">

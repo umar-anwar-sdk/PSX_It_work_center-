@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import re
+from difflib import SequenceMatcher
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
@@ -15,6 +16,34 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+KNOWN_SECTORS = (
+    "AUTOMOBILE ASSEMBLER",
+    "AUTOMOBILE PARTS & ACCESSORIES",
+    "CABLE & ELECTRICAL GOODS",
+    "CEMENT",
+    "CHEMICAL",
+    "COMMERCIAL BANKS",
+    "ENGINEERING",
+    "EXCHANGE TRADED FUNDS",
+    "FERTILIZER",
+    "FOOD & PERSONAL CARE PRODUCTS",
+    "GLASS & CERAMICS",
+    "INSURANCE",
+    "INV. BANKS / INV. COS. / SECURITIES COS.",
+    "OIL & GAS EXPLORATION COMPANIES",
+    "OIL & GAS MARKETING COMPANIES",
+    "PHARMACEUTICALS",
+    "POWER GENERATION & DISTRIBUTION",
+    "PROPERTY",
+    "REFINERY",
+    "TECHNOLOGY & COMMUNICATION",
+    "TEXTILE COMPOSITE",
+    "TEXTILE SPINNING",
+    "TEXTILE WEAVING",
+    "TRANSPORT",
+)
 
 
 def clean_text(text):
@@ -50,6 +79,147 @@ def extract_pdf_text(pdf_path):
     full_text = "\n".join(text_parts)
     logger.info("PDF text extraction completed. Total characters: %s", len(full_text))
     return full_text
+
+
+def _number_from_text(value, *, percent=False, integer=False):
+    """Return the usable number from a PDF cell that may contain stray glyphs."""
+    if not value:
+        return None
+
+    # Some PDFs place a watermark character inside a decimal, e.g. ``3.a82%``.
+    value = re.sub(r"(?<=\d)\.[A-Za-z]+(?=\d)", ".", value)
+    pattern = r"[-+]?\d+(?:\.\d+)?%" if percent else r"[-+]?\d+(?:\.\d+)?"
+    match = re.search(pattern, value)
+    if not match:
+        return None
+
+    if integer:
+        digits = re.sub(r"\D", "", value)
+        return int(digits) if digits else None
+
+    return Decimal(match.group(0).rstrip("%"))
+
+
+def _parse_pdf_table(pdf_path):
+    """Read the report table by its PDF columns instead of flattened text lines.
+
+    The Name and Sector cells are often wrapped onto separate lines.  Text-only
+    extraction loses their column position and can therefore join the second
+    half of a sector to the company name (or the reverse).
+    """
+    records = []
+
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            words = page.extract_words(use_text_flow=False, keep_blank_chars=False)
+            starts = sorted(
+                {
+                    round(float(word["top"]), 1)
+                    for word in words
+                    if float(word["x0"]) < 60 and word["text"].isdigit()
+                }
+            )
+
+            for index, row_top in enumerate(starts):
+                next_top = starts[index + 1] if index + 1 < len(starts) else float("inf")
+                row_words = [
+                    word for word in words
+                    if row_top - 3 <= float(word["top"]) < next_top - 1
+                ]
+
+                def cell(left, right):
+                    selected = [
+                        word for word in row_words
+                        if left <= float(word["x0"]) < right
+                        # A vertical page watermark is extracted as isolated
+                        # lower-case characters over the table columns.
+                        and (len(word["text"]) > 1 or word["text"] == "&")
+                    ]
+                    selected.sort(key=lambda word: (float(word["top"]), float(word["x0"])))
+                    return " ".join(word["text"] for word in selected)
+
+                symbol = cell(60, 108).strip()
+                # In some report pages the sector column starts slightly left
+                # of its header; 200 keeps values such as GLASS and POWER out
+                # of the company column.
+                company_name = cell(108, 200).strip()
+                sector = cell(200, 315).strip()
+                price = _number_from_text(cell(315, 355))
+                change_value = _number_from_text(cell(355, 415))
+                change_percent = _number_from_text(cell(415, 475), percent=True)
+                volume = _number_from_text(cell(475, 523), integer=True)
+
+                sector = _normalise_sector(sector)
+                if not sector:
+                    company_name, sector = _recover_sector_from_company(company_name)
+
+                # A report can legitimately have a symbol and market values
+                # while its company or sector is unavailable. Keep that row;
+                # only standardise the OCR variations of "Unknown".
+                if _is_unknown_placeholder(company_name):
+                    company_name = "Unknown"
+                if _is_unknown_placeholder(sector):
+                    sector = "Unknown"
+
+                # Ignore headings and rows whose numeric cells were not read.
+                if (
+                    not re.fullmatch(r"[A-Z][A-Z0-9.-]{1,14}", symbol)
+                    or not company_name
+                    or None in (price, change_value, change_percent, volume)
+                ):
+                    continue
+
+                records.append(
+                    {
+                        "company_name": company_name,
+                        "symbol": symbol,
+                        "sector": sector,
+                        "price": price,
+                        "change_value": change_value,
+                        "change_percent": change_percent,
+                        "volume": volume,
+                    }
+                )
+
+    return records
+
+
+def _sector_key(value):
+    return re.sub(r"[^A-Z0-9]", "", value.upper())
+
+
+def _normalise_sector(value):
+    """Correct harmless PDF glyph noise while keeping the official sector name."""
+    value = clean_text(value)
+    if not value:
+        return ""
+
+    value_key = _sector_key(value)
+    best_sector, score = max(
+        ((sector, SequenceMatcher(None, value_key, _sector_key(sector)).ratio()) for sector in KNOWN_SECTORS),
+        key=lambda item: item[1],
+    )
+    return best_sector if score >= 0.78 else value
+
+
+def _recover_sector_from_company(company_name):
+    """Handle a sector printed a few pixels inside the Name column."""
+    for sector in KNOWN_SECTORS:
+        match = re.search(r"(?<![A-Z])" + re.escape(sector) + r"\b", company_name)
+        if match:
+            before_sector = re.sub(r"\b[a-z]\s*$", "", company_name[:match.start()])
+            repaired_company = clean_text(before_sector + " " + company_name[match.end():])
+            return repaired_company, sector
+    return company_name, ""
+
+
+def _is_unknown_placeholder(company_name):
+    """Discard PDF placeholders, including minor OCR misspellings of Unknown."""
+    tokens = re.findall(r"[A-Za-z]+", company_name.lower())
+    return bool(tokens) and any(
+        SequenceMatcher(None, token, "unknown").ratio() >= 0.75
+        for token in tokens
+    )
 
 
 def extract_report_datetime(pdf_path):
@@ -187,6 +357,15 @@ def parse_pdf_text(text):
 
 
 def extract_company_information(pdf_path):
+    if hasattr(pdf_path, "path"):
+        pdf_path = pdf_path.path
+
+    records = _parse_pdf_table(pdf_path)
+    if records:
+        logger.info("Parsed %s company rows using PDF column positions", len(records))
+        return records
+
+    # Keep a text-only fallback for reports that do not expose word positions.
     text = extract_pdf_text(pdf_path)
     return parse_pdf_text(text)
 

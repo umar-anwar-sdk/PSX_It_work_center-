@@ -53,20 +53,42 @@
             <article class="stat-card"><div><p class="stat-label">Unchanged</p><p class="stat-value">{{ unchanged_count }}</p><p class="stat-helper">{{ unchanged_percentage }}% of compared</p></div><div class="stat-icon">➖</div></article>
             <article class="stat-card"><div><p class="stat-label">New Entries</p><p class="stat-value">{{ new_entry_count }}</p><p class="stat-helper">vs previous report</p></div><div class="stat-icon">➕</div></article>
           </section>
-          <section class="grid" style="grid-template-columns:1fr 360px;align-items:start;">
+          <section class="grid" style="grid-template-columns:1fr;align-items:start;">
             <section class="card table-card">
               <div class="card-header"><h2 class="card-title">Top 10 Stocks by Price Change %</h2></div>
-              <table><thead><tr><th>Symbol</th><th>Company</th><th>Sector</th><th>Price</th><th>Change %</th></tr></thead><tbody>{% for stock in top_price_changes %}<tr><td><strong>{{ stock.symbol }}</strong></td><td>{{ stock.company_name }}</td><td>{{ stock.sector|default:'-' }}</td><td>{{ stock.current_price|floatformat:2 }}</td><td class="badge {% if stock.change_percent >= 0 %}success{% else %}danger{% endif %}">{% if stock.change_percent > 0 %}+{% endif %}{{ stock.change_percent|floatformat:2 }}%</td></tr>{% empty %}<tr><td colspan="5">No comparable records found.</td></tr>{% endfor %}</tbody></table>
+              <table><thead><tr><th>Symbol</th><th>Company</th><th>Sector</th><th>Price</th><th>Change %</th></tr></thead><tbody>{% for stock in top_price_changes %}<tr><td><strong>{{ stock.symbol }}</strong></td><td><span class="truncate-cell" title="{{ stock.company_name }}">{{ stock.company_name }}</span></td><td><span class="truncate-cell" title="{{ stock.sector|default:'-' }}">{{ stock.sector|default:'-' }}</span></td><td>{{ stock.current_price|floatformat:2 }}</td><td class="badge {% if stock.change_percent >= 0 %}success{% else %}danger{% endif %}">{% if stock.change_percent > 0 %}+{% endif %}{{ stock.change_percent|floatformat:2 }}%</td></tr>{% empty %}<tr><td colspan="5">No comparable records found.</td></tr>{% endfor %}</tbody></table>
             </section>
-            <article class="card chart-card">
-              <div class="card-header"><h2 class="card-title">Market Movement Summary</h2></div>
-              <div class="bar-chart">{% for item in movement_bars %}<div class="bar" style="height: {{ item.height }}%"><span>{{ item.label }}</span></div>{% endfor %}</div>
-            </article>
           </section>
           <section class="grid grid-3">
             <article class="card"><div class="card-header"><h2 class="card-title">Biggest Gainers</h2></div><div class="list-stack">{% for stock in biggest_gainers %}<p class="badge success" style="width:fit-content;">{{ stock.symbol }} +{{ stock.change_percent|floatformat:2 }}%</p>{% empty %}<p>No gainers found.</p>{% endfor %}</div></article>
             <article class="card"><div class="card-header"><h2 class="card-title">New &amp; Removed Comparison</h2></div><div class="grid" style="grid-template-columns:1fr 1fr;gap:1rem;"><div><strong>Newly Added</strong>{% for stock in new_entries %}<p>{{ stock.symbol }}</p>{% empty %}<p>None</p>{% endfor %}</div><div><strong>Removed</strong>{% for stock in removed_entries %}<p>{{ stock.symbol }}</p>{% empty %}<p>None</p>{% endfor %}</div></div></article>
-            <article class="card chart-card"><div class="card-header"><h2 class="card-title">Sector Comparison</h2></div><div class="bar-chart" style="overflow-x:auto; overflow-y:hidden; padding-bottom:0.5rem;">{% for sector in sector_rows %}<div class="bar" style="height: {{ sector.height }}%"><span>{{ sector.label }}</span></div>{% empty %}<p>No sector data available.</p>{% endfor %}</div></article>
+            <article class="card chart-card">
+              <div class="card-header">
+                <h2 class="card-title">Sector Comparison</h2>
+                {% if previous_pdf %}<p class="card-subtitle">Compared with {{ previous_pdf.report_date|date:'d-M-Y' }}</p>{% endif %}
+              </div>
+              <div class="comparison-legend" aria-label="Sector comparison legend">
+                <button type="button" class="legend-pill previous-legend" data-date-label="Previous PDF: {{ previous_pdf.report_date|date:'d-M-Y' }}">Previous</button>
+                <button type="button" class="legend-pill current-legend" data-date-label="Current PDF: {{ current_pdf.report_date|date:'d-M-Y' }}">Current</button>
+              </div>
+              <div class="comparison-focus" id="comparison-date-focus">Current PDF: {{ current_pdf.report_date|date:'d-M-Y' }}</div>
+              <div class="comparison-bar-chart" style="overflow-x:auto; overflow-y:hidden; padding-bottom:0.5rem;">
+                {% for sector in sector_rows %}
+                  <div class="comparison-bar">
+                    <div class="comparison-track">
+                      <div class="comparison-fill previous-fill" data-label="Previous PDF" data-date="{{ previous_pdf.report_date|date:'d-M-Y' }}" title="Previous PDF: {{ previous_pdf.report_date|date:'d-M-Y' }} - {{ sector.label }}" style="height: {{ sector.previous_height }}%;"></div>
+                      <div class="comparison-fill current-fill" data-label="Current PDF" data-date="{{ current_pdf.report_date|date:'d-M-Y' }}" title="Current PDF: {{ current_pdf.report_date|date:'d-M-Y' }} - {{ sector.label }}" style="height: {{ sector.height }}%;"></div>
+                    </div>
+                    <div class="bar-labels">
+                      <span class="comparison-sector-name" title="{{ sector.label }}" aria-label="{{ sector.label }}"></span>
+                      <small title="Sector: {{ sector.label }} • Current: {{ sector.current_count }} • Previous: {{ sector.previous_count }}">{{ sector.current_count }} / {{ sector.previous_count }}</small>
+                    </div>
+                  </div>
+                {% empty %}
+                  <p>No sector data available.</p>
+                {% endfor %}
+              </div>
+            </article>
           </section>
         </main>
       </div>

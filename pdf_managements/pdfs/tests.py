@@ -83,6 +83,50 @@ class PDFParsingTests(TestCase):
         self.assertEqual(records[1]["sector"], "BANKS / SECURITIES")
 
 
+class PDFManagementDeleteTests(TestCase):
+    def test_deleting_a_pdf_removes_its_record_and_allows_reupload(self):
+        pdf = PDFDocument.objects.create(
+            name="delete-me",
+            file=SimpleUploadedFile("delete-me.pdf", b"pdf-content", content_type="application/pdf"),
+            file_hash="delete-me-hash",
+        )
+        ExtractedCompanyRecord.objects.create(
+            pdf_document=pdf,
+            company_name="Delete Me Limited",
+            symbol="DEL",
+        )
+
+        response = self.client.post(reverse("delete-pdf", args=[pdf.pk]))
+
+        self.assertRedirects(response, reverse("pdf-management"))
+        self.assertFalse(PDFDocument.objects.filter(pk=pdf.pk).exists())
+        self.assertFalse(ExtractedCompanyRecord.objects.filter(symbol="DEL").exists())
+
+
+class SearchScreenerViewTests(TestCase):
+    def setUp(self):
+        self.pdf = PDFDocument.objects.create(
+            name="screener-data",
+            file=SimpleUploadedFile("screener-data.pdf", b"pdf-content", content_type="application/pdf"),
+            report_date=date(2026, 7, 20),
+        )
+        ExtractedCompanyRecord.objects.create(
+            pdf_document=self.pdf, company_name="Alpha Cement", symbol="ALPHA",
+            sector="CEMENT", price=10, change_percent=2, volume=1000,
+        )
+        ExtractedCompanyRecord.objects.create(
+            pdf_document=self.pdf, company_name="Beta Bank", symbol="BETA",
+            sector="COMMERCIAL BANKS", price=20, change_percent=-1, volume=2000,
+        )
+
+    def test_filters_latest_saved_report_by_company_and_sector(self):
+        response = self.client.get(reverse("search-screener"), {"q": "alpha", "sector": "cement"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["result_count"], 1)
+        self.assertEqual(response.context["records"][0].symbol, "ALPHA")
+
+
 class DailyMarketExplorerViewTests(TestCase):
     def setUp(self):
         self.pdf_18 = self._create_pdf("pdf-18", date(2026, 7, 18), time(9, 0))
@@ -160,12 +204,50 @@ class DailyMarketExplorerViewTests(TestCase):
         self.assertEqual(list(response.context["companies"].values_list("symbol", flat=True)), ["C"])
 
 
+class MarketComparisonViewTests(TestCase):
+    def setUp(self):
+        self.pdf_18 = self._create_pdf("pdf-18", date(2026, 7, 18), time(9, 0))
+        self.pdf_19 = self._create_pdf("pdf-19", date(2026, 7, 19), time(9, 0))
+
+        self._create_company(self.pdf_18, "A", "Alpha", 1000, "COMMERCIAL BANKS")
+        self._create_company(self.pdf_19, "A", "Alpha", 1200, "COMMERCIAL BANKS")
+        self._create_company(self.pdf_19, "B", "Beta", 500, "POWER")
+
+    def _create_pdf(self, name, report_date, report_time):
+        return PDFDocument.objects.create(
+            name=name,
+            file=SimpleUploadedFile(f"{name}.pdf", b"pdf-content", content_type="application/pdf"),
+            report_date=report_date,
+            report_time=report_time,
+            is_processed=True,
+        )
+
+    def _create_company(self, pdf_document, symbol, company_name, price, sector):
+        return ExtractedCompanyRecord.objects.create(
+            pdf_document=pdf_document,
+            company_name=company_name,
+            symbol=symbol,
+            sector=sector,
+            price=price,
+            change_value=10,
+            change_percent=10,
+            volume=5000,
+        )
+
+    def test_market_comparison_top_price_changes_includes_sector(self):
+        response = self.client.get(reverse("market-comparison"), {"date": "2026-07-19"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["top_price_changes"])
+        self.assertEqual(response.context["top_price_changes"][0]["sector"], "COMMERCIAL BANKS")
+
+
 class CompanyAnalysisViewTests(TestCase):
     def setUp(self):
         self.pdf_18 = self._create_pdf("pdf-18", date(2026, 7, 18), time(9, 0))
         self.pdf_19 = self._create_pdf("pdf-19", date(2026, 7, 19), time(9, 0))
         self._create_company(self.pdf_18, "A", "Alpha", 1000)
-        self._create_company(self.pdf_19, "B", "Beta", 500)
+        self._create_company(self.pdf_19, "A", "Alpha", 1200)
 
     def _create_pdf(self, name, report_date, report_time):
         return PDFDocument.objects.create(
@@ -201,6 +283,13 @@ class CompanyAnalysisViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["selected_date"], date(2026, 7, 18))
         self.assertEqual(response.context["company"].pdf_document, self.pdf_18)
+
+    def test_company_analysis_builds_price_history_chart_points(self):
+        response = self.client.get(reverse("company-analysis"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["chart_points"]), 2)
+        self.assertTrue(all("height" in point for point in response.context["chart_points"]))
 
 
 class ReportsViewTests(TestCase):

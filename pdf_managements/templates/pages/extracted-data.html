@@ -53,8 +53,8 @@
               <thead>
                 <tr>
                   <th>Company</th>
-                  <th>Sector</th>
                   <th>Symbol</th>
+                  <th>Sector</th>
                   <th>Price</th>
                   <th>Change</th>
                   <th>Change %</th>
@@ -65,8 +65,8 @@
                 {% for row in table_rows %}
                 <tr>
                   <td>{{ row.company_name }}</td>
-                  <td>{{ row.sector }}</td>
                   <td>{{ row.symbol }}</td>
+                  <td>{{ row.sector }}</td>
                   <td>{{ row.price }}</td>
                   <td>{{ row.change_value }}</td>
                   <td>{{ row.change_percent }}</td>
@@ -83,7 +83,7 @@
                   <li><a class="outline-button" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
                   {% endif %}
                   {% for num in paginator.page_range %}
-                  <li><a class="outline-button" href="?page={{ num }}">{{ num }}</a></li>
+                  <li><a class="outline-button pagination-link{% if num == page_obj.number %} active{% endif %}" href="?page={{ num }}"{% if num == page_obj.number %} aria-current="page" style="background:#2563eb;color:#fff;border-color:#2563eb;"{% endif %}>{{ num }}</a></li>
                   {% endfor %}
                   {% if page_obj.has_next %}
                   <li><a class="outline-button" href="?page={{ page_obj.next_page_number }}">Next</a></li>

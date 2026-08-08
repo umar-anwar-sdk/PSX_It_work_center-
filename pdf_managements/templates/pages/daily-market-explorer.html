@@ -72,14 +72,14 @@
             <div class="card-header"><h2 class="card-title">{{ selected_pdf.name|default:'No PDF Selected' }}</h2></div>
             <table>
               <thead>
-                <tr><th>Symbol</th><th>Company</th><th>Sector</th><th>Price</th><th>Change Value</th><th>Change %</th><th>Volume</th><th>Status</th><th>Action</th></tr>
+                <tr><th>Company</th><th>Symbol</th><th>Sector</th><th>Price</th><th>Change Value</th><th>Change %</th><th>Volume</th><th>Status</th><th>Action</th></tr>
               </thead>
               <tbody>
                 {% if companies %}
                   {% for company in companies %}
                     <tr>
-                      <td><strong>{{ company.symbol }}</strong></td>
                       <td>{{ company.company_name }}</td>
+                      <td><strong>{{ company.symbol }}</strong></td>
                       <td>{{ company.sector|default:'-' }}</td>
                       <td>{% if company.price is not None %}{{ company.price }}{% else %}-{% endif %}</td>
                       <td>{% if company.change_value is not None %}{{ company.change_value }}{% else %}-{% endif %}</td>
@@ -112,7 +112,7 @@
                       <li><a class="outline-button" href="?page={{ page_obj.previous_page_number }}{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}{% if selected_status and selected_status != 'all' %}&status={{ selected_status }}{% endif %}">Previous</a></li>
                     {% endif %}
                     {% for num in paginator.page_range %}
-                      <li><a class="outline-button" href="?page={{ num }}{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}{% if selected_status and selected_status != 'all' %}&status={{ selected_status }}{% endif %}">{{ num }}</a></li>
+                      <li><a class="outline-button pagination-link{% if num == page_obj.number %} active{% endif %}" href="?page={{ num }}{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}{% if selected_status and selected_status != 'all' %}&status={{ selected_status }}{% endif %}"{% if num == page_obj.number %} aria-current="page" style="background:#2563eb;color:#fff;border-color:#2563eb;"{% endif %}>{{ num }}</a></li>
                     {% endfor %}
                     {% if page_obj.has_next %}
                       <li><a class="outline-button" href="?page={{ page_obj.next_page_number }}{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}{% if selected_status and selected_status != 'all' %}&status={{ selected_status }}{% endif %}">Next</a></li>

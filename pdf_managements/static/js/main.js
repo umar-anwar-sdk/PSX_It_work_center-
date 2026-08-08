@@ -36,6 +36,32 @@ if (themeToggle) {
   });
 }
 
+document.querySelectorAll('.comparison-fill').forEach((bar) => {
+  const updateFocus = () => {
+    const focus = document.getElementById('comparison-date-focus');
+    if (!focus) return;
+    focus.textContent = `${bar.dataset.label}: ${bar.dataset.date}`;
+  };
+
+  bar.addEventListener('click', updateFocus);
+  bar.addEventListener('mouseenter', updateFocus);
+  bar.setAttribute('tabindex', '0');
+  bar.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      updateFocus();
+    }
+  });
+});
+
+document.querySelectorAll('.legend-pill').forEach((pill) => {
+  pill.addEventListener('click', () => {
+    const focus = document.getElementById('comparison-date-focus');
+    if (!focus) return;
+    focus.textContent = pill.dataset.dateLabel;
+  });
+});
+
 window.addEventListener('click', (event) => {
   if (window.innerWidth < 1024 && sidebar.classList.contains('open') && !sidebar.contains(event.target) && !mobileToggle.contains(event.target)) {
     sidebar.classList.remove('open');

@@ -10,8 +10,10 @@ from types import SimpleNamespace
 from django.contrib import messages
 from django.core.files.base import ContentFile
 from django.core.paginator import Paginator
+from django.db.models import Q
 from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
 from scraper.forms import PDFDocumentForm
 from scraper.models import ComparisonResult, ExtractedCompanyRecord, GeneratedReport, PDFDocument
@@ -505,6 +507,8 @@ def market_analysis(request):
     biggest_loser = min(price_down, key=lambda record: record.change_percent, default=None)
 
     sector_values = {}
+    sector_counts = {}
+    sector_records = {}
     if selected_pdf:
         for record in selected_pdf.extracted_companies.all():
             sector_name = (record.sector or "").strip()
@@ -517,15 +521,40 @@ def market_analysis(request):
                 sector_values.setdefault(sector_name, []).append(Decimal(str(raw_change)))
             except ArithmeticError:
                 continue
+            sector_counts[sector_name] = sector_counts.get(sector_name, 0) + 1
+            sector_records.setdefault(sector_name, []).append(record)
 
-    sector_data = [
-        {"name": sector, "change_percent": sum(changes) / len(changes)}
-        for sector, changes in sector_values.items() if changes
-    ]
-    sector_data.sort(key=lambda item: item["change_percent"], reverse=True)
-    max_sector_change = max((abs(item["change_percent"]) for item in sector_data), default=Decimal("0"))
+    sector_data = []
+    for sector, changes in sector_values.items():
+        count = sector_counts.get(sector, 0)
+        avg_change = sum(changes) / len(changes)
+        sector_data.append({
+            "name": sector,
+            "change_percent": avg_change,
+            "count": count,
+        })
+    sector_data.sort(key=lambda item: item["count"], reverse=True)
+    max_sector_count = max((item["count"] for item in sector_data), default=1)
     for item in sector_data:
-        item["height"] = max(10, round((abs(item["change_percent"]) / max_sector_change) * 100)) if max_sector_change else 10
+        item["height"] = max(10, round((item["count"] / max_sector_count) * 100))
+        item["intensity"] = max(10, round((item["count"] / max_sector_count) * 100))
+
+    sector_company_data = []
+    for sector in sector_data[:6]:
+        records = sector_records.get(sector["name"], [])
+        top_companies = sorted(
+            records,
+            key=lambda record: record.change_percent if record.change_percent is not None else Decimal("-999"),
+            reverse=True,
+        )[:3]
+        sector_company_data.append({
+            "name": sector["name"],
+            "top_companies": [
+                f"{rec.company_name} ({rec.change_percent:+.2f}%)" if rec.change_percent is not None else rec.company_name
+                for rec in top_companies
+            ],
+            "count": sector.get("count", 0),
+        })
 
     context = {
         "selected_pdf": selected_pdf,
@@ -548,6 +577,19 @@ def market_analysis(request):
             {"label": "Unchanged", "height": percentage(len(unchanged))},
         ],
         "sector_data": sector_data[:6],
+        "sector_company_data": sector_company_data,
+        "sector_counts": [
+            {
+                "name": item["name"],
+                "count": item["count"],
+                "avg_change": item["change_percent"],
+                "color": "59,130,246",
+                "opacity": "0.18",
+                "intensity": item.get("intensity", 0),
+            }
+            for item in sector_data[:6]
+        ],
+        "sector_pdf_url": selected_pdf.file.url if selected_pdf and getattr(selected_pdf, 'file', None) else None,
         "top_momentum": top_momentum,
         "biggest_gainer": biggest_gainer,
         "biggest_loser": biggest_loser,
@@ -556,7 +598,6 @@ def market_analysis(request):
 
 
 def market_comparison(request):
-    """Render the existing comparison dashboard with saved PDF extraction data."""
     requested_date = _parse_report_date(request.GET.get("date"))
     current_pdf = _get_latest_pdf_for_date(requested_date) if requested_date else None
     if current_pdf is None:
@@ -566,15 +607,34 @@ def market_comparison(request):
     comparison_rows = _build_comparison_results(current_pdf) if current_pdf else []
     total_stocks = current_pdf.extracted_companies.count() if current_pdf else 0
 
+    current_sector_lookup = {}
+    previous_sector_lookup = {}
+    if current_pdf:
+        current_sector_lookup = {
+            record.symbol: (record.sector or "").strip()
+            for record in current_pdf.extracted_companies.all()
+            if getattr(record, "symbol", None)
+        }
+    if previous_pdf:
+        previous_sector_lookup = {
+            record.symbol: (record.sector or "").strip()
+            for record in previous_pdf.extracted_companies.all()
+            if getattr(record, "symbol", None)
+        }
+
     price_changes, new_entries, removed_entries = [], [], []
     for row in comparison_rows:
+        symbol = row.get("symbol")
         if row["status"] == "NEW":
+            row["sector"] = current_sector_lookup.get(symbol, "")
             new_entries.append(row)
             continue
         if row["status"] == "REMOVED":
+            row["sector"] = previous_sector_lookup.get(symbol, "")
             removed_entries.append(row)
             continue
 
+        row["sector"] = current_sector_lookup.get(symbol, previous_sector_lookup.get(symbol, ""))
         previous_price, current_price = row["previous_price"], row["current_price"]
         if previous_price is None or current_price is None or previous_price == 0:
             continue
@@ -592,18 +652,44 @@ def market_comparison(request):
         return round((count / comparable_total) * 100) if comparable_total else 0
 
     sector_rows = []
+    current_sector_counts = {}
+    previous_sector_counts = {}
+
     if current_pdf:
-        sector_counts = {}
         for record in current_pdf.extracted_companies.all():
             sector_name = (record.sector or "").strip()
             if not sector_name:
                 continue
-            sector_counts[sector_name] = sector_counts.get(sector_name, 0) + 1
-        largest_sector_count = max(sector_counts.values(), default=0)
-        sector_rows = [
-            {"label": sector, "height": round((count / largest_sector_count) * 100)}
-            for sector, count in sorted(sector_counts.items(), key=lambda item: item[1], reverse=True)[:4]
-        ] if largest_sector_count else []
+            current_sector_counts[sector_name] = current_sector_counts.get(sector_name, 0) + 1
+
+    if previous_pdf:
+        for record in previous_pdf.extracted_companies.all():
+            sector_name = (record.sector or "").strip()
+            if not sector_name:
+                continue
+            previous_sector_counts[sector_name] = previous_sector_counts.get(sector_name, 0) + 1
+
+    all_sectors = sorted(set(current_sector_counts) | set(previous_sector_counts))
+    max_sector_count = max(
+        max(current_sector_counts.values(), default=0),
+        max(previous_sector_counts.values(), default=0),
+        1,
+    )
+
+    sector_rows = []
+    for sector in all_sectors:
+        current_count = current_sector_counts.get(sector, 0)
+        previous_count = previous_sector_counts.get(sector, 0)
+        sector_rows.append({
+            "label": sector,
+            "current_count": current_count,
+            "previous_count": previous_count,
+            "height": max(10, round((current_count / max_sector_count) * 100)),
+            "previous_height": max(10, round((previous_count / max_sector_count) * 100)),
+            "delta": current_count - previous_count,
+        })
+
+    sector_rows = sorted(sector_rows, key=lambda item: (item["current_count"] + item["previous_count"]), reverse=True)[:6]
 
     context = {
         "current_pdf": current_pdf,
@@ -708,6 +794,18 @@ def pdf_details(request, pk):
             "paginator": paginator,
         },
     )
+
+
+@require_POST
+def delete_pdf(request, pk):
+    pdf_document = get_object_or_404(PDFDocument, pk=pk)
+    pdf_name = pdf_document.name
+    if pdf_document.file:
+        pdf_document.file.delete(save=False)
+    pdf_document.delete()
+
+    messages.success(request, f"{pdf_name} was deleted. You can upload it again.")
+    return redirect("pdf-management")
 
 
 REPORT_PERIODS = {
@@ -836,7 +934,55 @@ def download_report(request, pk):
 
 
 def search_screener(request):
-    return render(request, "pages/search-screener.html")
+    """Run the existing screener UI against the latest saved market report."""
+    selected_date = _parse_report_date(request.GET.get("date"))
+    latest_pdf = _get_latest_pdf_for_date(selected_date)
+    if selected_date is None and latest_pdf:
+        selected_date = latest_pdf.report_date
+    filters = {
+        "q": (request.GET.get("q") or "").strip(),
+        "sector": (request.GET.get("sector") or "").strip(),
+        "price": (request.GET.get("price") or "").strip(),
+        "change_percent": (request.GET.get("change_percent") or "").strip(),
+        "volume": (request.GET.get("volume") or "").strip(),
+    }
+
+    records = ExtractedCompanyRecord.objects.none()
+    if latest_pdf:
+        records = latest_pdf.extracted_companies.all()
+        if filters["q"]:
+            records = records.filter(
+                Q(symbol__icontains=filters["q"]) | Q(company_name__icontains=filters["q"])
+            )
+        if filters["sector"]:
+            records = records.filter(sector__icontains=filters["sector"])
+
+        for field in ("price", "change_percent", "volume"):
+            if not filters[field]:
+                continue
+            try:
+                records = records.filter(**{field: Decimal(filters[field])})
+            except Exception:
+                messages.warning(request, f"{field.replace('_', ' ').title()} must be a valid number.")
+
+        records = records.order_by("symbol", "company_name")
+
+    paginator = Paginator(records, 10)
+    page_obj = paginator.get_page(request.GET.get("page", 1))
+
+    return render(
+        request,
+        "pages/search-screener.html",
+        {
+            "records": page_obj.object_list,
+            "result_count": paginator.count,
+            "filters": filters,
+            "latest_pdf": latest_pdf,
+            "selected_date": selected_date,
+            "page_obj": page_obj,
+            "paginator": paginator,
+        },
+    )
 
 
 def settings(request):
