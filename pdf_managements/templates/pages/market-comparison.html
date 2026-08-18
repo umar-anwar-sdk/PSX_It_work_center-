@@ -1,62 +1,27 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Market Comparison</title>
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
-  </head>
-  <body>
-    <div class="app-shell">
-      <aside class="sidebar">
-        <div class="sidebar-header">
-          <div class="sidebar-logo" aria-hidden="true">
-            <svg viewBox="0 0 32 32" width="28" height="28" fill="currentColor">
-              <path d="M5 24V12h4v12H5Zm6 0V7h4v17h-4Zm6 0V4h4v20h-4Zm6 0V10h4v14h-4Z" />
-              <path d="M4 26h24" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-            </svg>
-          </div>
-          <div class="sidebar-brand">
-            <strong>PSX Daily Market</strong>
-            <span>Intelligence Engine</span>
-          </div>
-        </div>
-        <nav class="nav-list" aria-label="Primary navigation">
-          <a class="nav-link" href="{% url 'home' %}">Dashboard</a>
-          <a class="nav-link" href="{% url 'pdf-management' %}">PDF Management</a>
-          <a class="nav-link" href="{% url 'daily-market-explorer' %}">Daily Market Explorer</a>
-          <a class="nav-link" href="{% url 'company-analysis' %}">Company Analysis</a>
-          <a class="nav-link active" href="{% url 'market-comparison' %}">Market Comparison</a>
-          <a class="nav-link" href="{% url 'market-analytics' %}">Market Analytics</a>
-          <a class="nav-link" href="{% url 'reports' %}">Reports</a>
-          <a class="nav-link" href="{% url 'watchlist' %}">Watchlist</a>
-          <a class="nav-link" href="{% url 'search-screener' %}">Search &amp; Screener</a>
-          <a class="nav-link" href="{% url 'settings' %}">Settings</a>
-        </nav>
-        <div class="sidebar-footer"><div class="help-card">...</div></div>
-      </aside>
-      <div class="main-area">
+{% extends 'base.html' %}
+{% block title %}Market Comparison{% endblock %}
+{% block content %}
         <header class="topbar">
-          <button class="icon-button mobile-menu" data-mobile-menu>☰</button>
+          <button class="icon-button mobile-menu" data-mobile-menu>&#9776;</button>
           <div>
             <h1>Market Comparison</h1>
             <p>Compare market data between two different dates</p>
           </div>
-          <div class="topbar-actions"><form method="get"><select name="date" class="outline-button" aria-label="Select comparison date" onchange="this.form.submit()">{% for available_date in available_dates %}<option value="{{ available_date|date:'Y-m-d' }}" {% if current_pdf.report_date == available_date %}selected{% endif %}>{{ available_date|date:'d-M-Y' }}</option>{% empty %}<option value="">No reports available</option>{% endfor %}</select></form><button class="icon-button" data-theme-toggle>☀</button></div>
+          <div class="topbar-actions"><form method="get"><select name="date" class="outline-button" aria-label="Select comparison date" data-auto-submit>{% for available_date in available_dates %}<option value="{{ available_date|date:'Y-m-d' }}" {% if current_pdf.report_date == available_date %}selected{% endif %}>{{ available_date|date:'d-M-Y' }}</option>{% empty %}<option value="">No reports available</option>{% endfor %}</select></form><button class="icon-button" data-theme-toggle>&#9728;</button></div>
         </header>
         <main class="content">
+          {% if invalid_date %}<section class="card"><p class="danger-text">The requested report date is invalid. Select a processed report date.</p></section>{% endif %}
           <section class="grid grid-5">
-            <article class="stat-card"><div><p class="stat-label">Total Stocks</p><p class="stat-value">{{ total_stocks }}</p><p class="stat-helper">{% if previous_pdf %}vs {{ previous_pdf.report_date|date:'d-M-Y' }}{% else %}No previous report{% endif %}</p></div><div class="stat-icon">📊</div></article>
-            <article class="stat-card"><div><p class="stat-label">Price Up</p><p class="stat-value">{{ price_up_count }}</p><p class="stat-helper">{{ price_up_percentage }}% of compared</p></div><div class="stat-icon">⬆</div></article>
-            <article class="stat-card"><div><p class="stat-label">Price Down</p><p class="stat-value">{{ price_down_count }}</p><p class="stat-helper">{{ price_down_percentage }}% of compared</p></div><div class="stat-icon">⬇</div></article>
-            <article class="stat-card"><div><p class="stat-label">Unchanged</p><p class="stat-value">{{ unchanged_count }}</p><p class="stat-helper">{{ unchanged_percentage }}% of compared</p></div><div class="stat-icon">➖</div></article>
-            <article class="stat-card"><div><p class="stat-label">New Entries</p><p class="stat-value">{{ new_entry_count }}</p><p class="stat-helper">vs previous report</p></div><div class="stat-icon">➕</div></article>
+            <article class="stat-card"><div><p class="stat-label">Total Stocks</p><p class="stat-value">{{ total_stocks }}</p><p class="stat-helper">{% if previous_pdf %}vs {{ previous_pdf.report_date|date:'d-M-Y' }}{% else %}No previous report{% endif %}</p></div><div class="stat-icon">&#9679;</div></article>
+            <article class="stat-card"><div><p class="stat-label">Price Up</p><p class="stat-value">{{ price_up_count }}</p><p class="stat-helper">{{ price_up_percentage }}% of compared</p></div><div class="stat-icon">&#8593;</div></article>
+            <article class="stat-card"><div><p class="stat-label">Price Down</p><p class="stat-value">{{ price_down_count }}</p><p class="stat-helper">{{ price_down_percentage }}% of compared</p></div><div class="stat-icon">&#8595;</div></article>
+            <article class="stat-card"><div><p class="stat-label">Unchanged</p><p class="stat-value">{{ unchanged_count }}</p><p class="stat-helper">{{ unchanged_percentage }}% of compared</p></div><div class="stat-icon">&#8722;</div></article>
+            <article class="stat-card"><div><p class="stat-label">New Entries</p><p class="stat-value">{{ new_entry_count }}</p><p class="stat-helper">vs previous report</p></div><div class="stat-icon">&#43;</div></article>
           </section>
           <section class="grid" style="grid-template-columns:1fr;align-items:start;">
             <section class="card table-card">
               <div class="card-header"><h2 class="card-title">Top 10 Stocks by Price Change %</h2></div>
-              <table><thead><tr><th>Symbol</th><th>Company</th><th>Sector</th><th>Price</th><th>Change %</th></tr></thead><tbody>{% for stock in top_price_changes %}<tr><td><strong>{{ stock.symbol }}</strong></td><td><span class="truncate-cell" title="{{ stock.company_name }}">{{ stock.company_name }}</span></td><td><span class="truncate-cell" title="{{ stock.sector|default:'-' }}">{{ stock.sector|default:'-' }}</span></td><td>{{ stock.current_price|floatformat:2 }}</td><td class="badge {% if stock.change_percent >= 0 %}success{% else %}danger{% endif %}">{% if stock.change_percent > 0 %}+{% endif %}{{ stock.change_percent|floatformat:2 }}%</td></tr>{% empty %}<tr><td colspan="5">No comparable records found.</td></tr>{% endfor %}</tbody></table>
+              <table><thead><tr><th>Symbol</th><th>Company</th><th>Sector</th><th>Price</th><th>Change %</th></tr></thead><tbody>{% for stock in top_price_changes %}<tr><td><strong>{{ stock.symbol }}</strong></td><td><span class="truncate-cell" title="{{ stock.company_name }}">{{ stock.company_name }}</span></td><td><span class="truncate-cell" title="{{ stock.sector|default:'-' }}">{{ stock.sector|default:'-' }}</span></td><td>{{ stock.current_price|floatformat:2 }}</td><td><span class="badge {% if stock.change_percent >= 0 %}success{% else %}danger{% endif %}">{% if stock.change_percent > 0 %}+{% endif %}{{ stock.change_percent|floatformat:2 }}%</span></td></tr>{% empty %}<tr><td colspan="5">No comparable records found.</td></tr>{% endfor %}</tbody></table>
             </section>
           </section>
           <section class="grid grid-3">
@@ -71,7 +36,7 @@
                 <button type="button" class="legend-pill previous-legend" data-date-label="Previous PDF: {{ previous_pdf.report_date|date:'d-M-Y' }}">Previous</button>
                 <button type="button" class="legend-pill current-legend" data-date-label="Current PDF: {{ current_pdf.report_date|date:'d-M-Y' }}">Current</button>
               </div>
-              <div class="comparison-focus" id="comparison-date-focus">Current PDF: {{ current_pdf.report_date|date:'d-M-Y' }}</div>
+              <div class="comparison-focus" id="comparison-date-focus">Current PDF: {% if current_pdf %}{{ current_pdf.report_date|date:'d-M-Y' }}{% else %}Not selected{% endif %}</div>
               <div class="comparison-bar-chart" style="overflow-x:auto; overflow-y:hidden; padding-bottom:0.5rem;">
                 {% for sector in sector_rows %}
                   <div class="comparison-bar">
@@ -81,7 +46,7 @@
                     </div>
                     <div class="bar-labels">
                       <span class="comparison-sector-name" title="{{ sector.label }}" aria-label="{{ sector.label }}"></span>
-                      <small title="Sector: {{ sector.label }} • Current: {{ sector.current_count }} • Previous: {{ sector.previous_count }}">{{ sector.current_count }} / {{ sector.previous_count }}</small>
+                      <small title="Sector: {{ sector.label }} &bull; Current: {{ sector.current_count }} &bull; Previous: {{ sector.previous_count }}">{{ sector.current_count }} / {{ sector.previous_count }}</small>
                     </div>
                   </div>
                 {% empty %}
@@ -91,8 +56,6 @@
             </article>
           </section>
         </main>
-      </div>
-    </div>
-    <script src="{% static 'js/main.js' %}"></script>
-  </body>
-</html>
+      {% endblock %}
+
+

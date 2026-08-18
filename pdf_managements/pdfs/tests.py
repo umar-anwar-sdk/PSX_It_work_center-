@@ -3,6 +3,7 @@ from datetime import date, time
 from pathlib import Path
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
@@ -13,7 +14,18 @@ from .models import ScrapedRecord
 from .views import import_data_from_folder
 
 
-class ScraperImportTests(TestCase):
+class AuthenticatedTestCase(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.user = get_user_model().objects.create_user(
+            username=f"admin-{self.__class__.__name__}",
+            password="test-password-123",
+            is_staff=True,
+        )
+        self.client.force_login(self.user)
+
+
+class ScraperImportTests(AuthenticatedTestCase):
     def test_imports_json_records_from_folder(self):
         folder = Path(__file__).resolve().parent / 'testdata' / 'scrapper'
         folder.mkdir(parents=True, exist_ok=True)
@@ -51,7 +63,7 @@ class ScraperImportTests(TestCase):
         self.assertEqual(ScrapedRecord.objects.get(symbol='CNERGY').company, 'Cnergyico PK Limited')
 
 
-class PDFParsingTests(TestCase):
+class PDFParsingTests(AuthenticatedTestCase):
     def test_get_table_data_includes_sector_for_rendering(self):
         rows = get_table_data([
             {
@@ -83,7 +95,7 @@ class PDFParsingTests(TestCase):
         self.assertEqual(records[1]["sector"], "BANKS / SECURITIES")
 
 
-class PDFManagementDeleteTests(TestCase):
+class PDFManagementDeleteTests(AuthenticatedTestCase):
     def test_deleting_a_pdf_removes_its_record_and_allows_reupload(self):
         pdf = PDFDocument.objects.create(
             name="delete-me",
@@ -103,12 +115,14 @@ class PDFManagementDeleteTests(TestCase):
         self.assertFalse(ExtractedCompanyRecord.objects.filter(symbol="DEL").exists())
 
 
-class SearchScreenerViewTests(TestCase):
+class SearchScreenerViewTests(AuthenticatedTestCase):
     def setUp(self):
+        super().setUp()
         self.pdf = PDFDocument.objects.create(
             name="screener-data",
             file=SimpleUploadedFile("screener-data.pdf", b"pdf-content", content_type="application/pdf"),
             report_date=date(2026, 7, 20),
+            is_processed=True,
         )
         ExtractedCompanyRecord.objects.create(
             pdf_document=self.pdf, company_name="Alpha Cement", symbol="ALPHA",
@@ -127,8 +141,9 @@ class SearchScreenerViewTests(TestCase):
         self.assertEqual(response.context["records"][0].symbol, "ALPHA")
 
 
-class DailyMarketExplorerViewTests(TestCase):
+class DailyMarketExplorerViewTests(AuthenticatedTestCase):
     def setUp(self):
+        super().setUp()
         self.pdf_18 = self._create_pdf("pdf-18", date(2026, 7, 18), time(9, 0))
         self.pdf_19 = self._create_pdf("pdf-19", date(2026, 7, 19), time(9, 0))
         self.pdf_19_later = self._create_pdf("pdf-19-later", date(2026, 7, 19), time(10, 0))
@@ -172,6 +187,7 @@ class DailyMarketExplorerViewTests(TestCase):
             file=SimpleUploadedFile(f"{name}.pdf", b"pdf-content", content_type="application/pdf"),
             report_date=report_date,
             report_time=report_time,
+            is_processed=True,
         )
 
     def _create_company(self, pdf_document, symbol, company_name, volume):
@@ -203,9 +219,26 @@ class DailyMarketExplorerViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(list(response.context["companies"].values_list("symbol", flat=True)), ["C"])
 
+    def test_unprocessed_pdf_never_replaces_latest_market_data(self):
+        failed = self._create_pdf("failed-later", date(2026, 7, 20), time(11, 0))
+        failed.is_processed = False
+        failed.processing_error = "parse failed"
+        failed.save(update_fields=["is_processed", "processing_error"])
 
-class MarketComparisonViewTests(TestCase):
+        response = self.client.get(reverse("daily-market-explorer"))
+
+        self.assertEqual(response.context["selected_pdf"], self.pdf_19_later)
+
+    def test_invalid_date_does_not_fall_back_to_latest_data(self):
+        response = self.client.get(reverse("daily-market-explorer"), {"date": "not-a-date"})
+
+        self.assertIsNone(response.context["selected_pdf"])
+        self.assertTrue(response.context["invalid_date"])
+
+
+class MarketComparisonViewTests(AuthenticatedTestCase):
     def setUp(self):
+        super().setUp()
         self.pdf_18 = self._create_pdf("pdf-18", date(2026, 7, 18), time(9, 0))
         self.pdf_19 = self._create_pdf("pdf-19", date(2026, 7, 19), time(9, 0))
 
@@ -242,8 +275,9 @@ class MarketComparisonViewTests(TestCase):
         self.assertEqual(response.context["top_price_changes"][0]["sector"], "COMMERCIAL BANKS")
 
 
-class CompanyAnalysisViewTests(TestCase):
+class CompanyAnalysisViewTests(AuthenticatedTestCase):
     def setUp(self):
+        super().setUp()
         self.pdf_18 = self._create_pdf("pdf-18", date(2026, 7, 18), time(9, 0))
         self.pdf_19 = self._create_pdf("pdf-19", date(2026, 7, 19), time(9, 0))
         self._create_company(self.pdf_18, "A", "Alpha", 1000)
@@ -292,7 +326,7 @@ class CompanyAnalysisViewTests(TestCase):
         self.assertTrue(all("height" in point for point in response.context["chart_points"]))
 
 
-class ReportsViewTests(TestCase):
+class ReportsViewTests(AuthenticatedTestCase):
     def test_generates_and_downloads_a_selected_report(self):
         pdf = PDFDocument.objects.create(
             name="daily-data",

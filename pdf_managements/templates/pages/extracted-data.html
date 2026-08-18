@@ -1,41 +1,6 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Extracted Data</title>
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
-  </head>
-  <body>
-    <div class="app-shell">
-      <aside class="sidebar">
-        <div class="sidebar-header">
-          <div class="sidebar-logo" aria-hidden="true">
-            <svg viewBox="0 0 32 32" width="28" height="28" fill="currentColor">
-              <path d="M5 24V12h4v12H5Zm6 0V7h4v17h-4Zm6 0V4h4v20h-4Zm6 0V10h4v14h-4Z" />
-              <path d="M4 26h24" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-            </svg>
-          </div>
-          <div class="sidebar-brand">
-            <strong>PSX Daily Market</strong>
-            <span>Intelligence Engine</span>
-          </div>
-        </div>
-        <nav class="nav-list" aria-label="Primary navigation">
-          <a class="nav-link" href="{% url 'home' %}">Dashboard</a>
-          <a class="nav-link active" href="{% url 'pdf-management' %}">PDF Management</a>
-          <a class="nav-link" href="{% url 'daily-market-explorer' %}">Daily Market Explorer</a>
-          <a class="nav-link" href="{% url 'company-analysis' %}">Company Analysis</a>
-          <a class="nav-link" href="{% url 'market-comparison' %}">Market Comparison</a>
-          <a class="nav-link" href="{% url 'market-analytics' %}">Market Analytics</a>
-          <a class="nav-link" href="{% url 'reports' %}">Reports</a>
-          <a class="nav-link" href="{% url 'watchlist' %}">Watchlist</a>
-          <a class="nav-link" href="{% url 'search-screener' %}">Search &amp; Screener</a>
-          <a class="nav-link" href="{% url 'settings' %}">Settings</a>
-        </nav>
-      </aside>
-      <div class="main-area">
+﻿{% extends 'base.html' %}
+{% block title %}Extracted Data{% endblock %}
+{% block content %}
         <header class="topbar">
           <div>
             <h1>Extracted Data</h1>
@@ -97,7 +62,6 @@
             {% endif %}
           </section>
         </main>
-      </div>
-    </div>
-  </body>
-</html>
+      {% endblock %}
+
+

@@ -1,13 +1,12 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="main-area">
   <header class="topbar">
-    <button class="icon-button mobile-menu" data-mobile-menu>☰</button>
+    <button class="icon-button mobile-menu" data-mobile-menu>&#9776;</button>
     <div><h1>Company Analysis</h1><p>Detailed analysis, history, trends and momentum</p></div>
     <div class="topbar-actions">
             <form method="get" style="display:inline-flex; align-items:center; gap:0.5rem;">
-              <select name="date" class="outline-button" onchange="this.form.submit()">
+              <select name="date" class="outline-button" data-auto-submit>
                 {% for available_date in available_dates %}
                   <option value="{{ available_date|date:'Y-m-d' }}" {% if selected_date == available_date %}selected{% endif %}>{{ available_date|date:'d-M-Y' }}</option>
                 {% endfor %}
@@ -16,48 +15,50 @@
                 <input type="hidden" name="status" value="{{ selected_status }}" />
               {% endif %}
             </form>
-            <button class="icon-button" data-theme-toggle>☀</button>
+            <button class="icon-button" data-theme-toggle>&#9728;</button>
           </div>
   </header>
   <main class="content">
-    <form class="section-row" method="get">
+    <form class="analysis-toolbar" method="get">
       <input class="input" name="q" type="text" value="{{ search_query }}" placeholder="Enter Symbol or Company Name..." />
       <input class="input" type="text" value="{% if company %}{{ company.symbol }} - {{ company.company_name }}{% endif %}" placeholder="Selected company" readonly />
-      <button class="icon-button" title="Search">⌕</button>
-      <button class="button" type="button">Add to Watchlist</button>
-      <button class="outline-button" type="submit" name="download" value="csv">⬇ Download Report</button>
+      <button class="button" title="Search">Search</button>
+      {% if not company or 'watchlist_management' not in allowed_modules %}<span></span>{% endif %}
+      <button class="outline-button" type="submit" name="download" value="csv">&#8595; Download Report</button>
     </form>
-    {% if result_not_found %}<p style="color:var(--muted-foreground);margin:0 0 1rem;">No saved company data was found for “{{ search_query }}”.</p>{% endif %}
+    {% if company and 'watchlist_management' in allowed_modules %}<form method="post" action="{% url 'watchlist' %}" class="section-row">{% csrf_token %}<input type="hidden" name="action" value="add"><input type="hidden" name="symbol" value="{{ company.symbol }}"><button class="button" type="submit">{% if is_watchlisted %}Already Watchlisted{% else %}Add {{ company.symbol }} to Watchlist{% endif %}</button></form>{% endif %}
+    {% if invalid_date %}<div class="empty-state card">The selected date is invalid.</div>{% elif not company and selected_date %}<div class="empty-state card">No company data is available for the selected date.</div>{% elif result_not_found %}<p style="color:var(--muted-foreground);margin:0 0 1rem;">No saved company data was found for &quot;{{ search_query }}&quot; on the selected date.</p>{% endif %}
 
-    <section class="card"><div class="grid" style="grid-template-columns:340px 1fr 360px; align-items:center;">
-      <div>
-        <div style="width:96px;height:96px;border-radius:999px;border:1px solid var(--border);background:#fff7ed;color:#ea580c;display:grid;place-items:center;font-size:2rem;font-weight:800;">{% if company %}{{ company.symbol|slice:":2" }}{% else %}--{% endif %}</div>
-        <h2 style="margin:0.8rem 0 0;font-size:2rem;">{% if company %}{{ company.symbol }}{% else %}No company selected{% endif %}</h2>
-        <p style="margin:.25rem 0 0;color:var(--muted-foreground);font-weight:700;">{% if company %}{{ company.company_name }}{% else %}Search a saved symbol or company name above{% endif %}</p>
-        <div class="section-row" style="margin-top:1rem;"><span class="badge success">{% if company %}Saved{% else %}No data{% endif %}</span><span class="badge primary">{% if company %}{{ company.pdf_document.report_date|date:"d-M-Y" }}{% endif %}</span></div>
+    <section class="card"><div class="company-hero-grid">
+      <div class="company-identity">
+        <div class="company-avatar">{% if company %}{{ company.symbol|slice:":2" }}{% else %}--{% endif %}</div>
+        <h2 class="company-symbol">{% if company %}{{ company.symbol }}{% else %}No company selected{% endif %}</h2>
+        <p class="company-name" title="{% if company %}{{ company.company_name }}{% endif %}">{% if company %}{{ company.company_name }}{% else %}Search a saved symbol or company name above{% endif %}</p>
+        <div class="section-row" style="margin-top:.7rem;"><span class="badge success">{% if company %}Saved{% else %}No data{% endif %}</span><span class="badge primary">{% if company %}{{ company.pdf_document.report_date|date:"d-M-Y" }}{% endif %}</span></div>
       </div>
       <div class="metric-grid">
-        <div class="metric"><div class="label">Current Price (PKR)</div><div class="value">{% if company.price is not None %}{{ company.price|floatformat:2 }}{% else %}—{% endif %}</div><div class="helper">{% if company.change_value is not None %}{{ company.change_value|floatformat:2 }} ({% if company.change_percent is not None %}{{ company.change_percent|floatformat:2 }}%{% endif %}){% else %}No change data{% endif %}</div></div>
-        <div class="metric"><div class="label">Previous Close</div><div class="value">{% if previous_record and previous_record.price is not None %}{{ previous_record.price|floatformat:2 }}{% else %}—{% endif %}</div><div class="helper">{% if previous_record %}Previous saved session{% else %}No previous session{% endif %}</div></div>
-        <div class="metric"><div class="label">Volume</div><div class="value">{% if company.volume is not None %}{{ company.volume }}{% else %}—{% endif %}</div><div class="helper">{% if company %}Saved trading volume{% else %}No volume data{% endif %}</div></div>
+        <div class="metric"><div class="label">Current Price (PKR)</div><div class="value">{% if company.price is not None %}{{ company.price|floatformat:2 }}{% else %}-{% endif %}</div><div class="helper">{% if company.change_value is not None %}{{ company.change_value|floatformat:2 }} ({% if company.change_percent is not None %}{{ company.change_percent|floatformat:2 }}%{% endif %}){% else %}No change data{% endif %}</div></div>
+        <div class="metric"><div class="label">Previous Close</div><div class="value">{% if previous_record and previous_record.price is not None %}{{ previous_record.price|floatformat:2 }}{% else %}-{% endif %}</div><div class="helper">{% if previous_record %}Previous saved session{% else %}No previous session{% endif %}</div></div>
+        <div class="metric"><div class="label">Volume</div><div class="value" title="{{ company.volume }}">{% if company.volume is not None %}{{ company.volume|compact_number }}{% else %}-{% endif %}</div><div class="helper">{% if company %}Saved trading volume{% else %}No volume data{% endif %}</div></div>
       </div>
-      <div class="info-block"><strong>Momentum &amp; AI Score</strong><div style="font-size:3rem;font-weight:800;color:var(--success);margin:1rem 0;">{% if company.change_percent is not None %}{{ company.change_percent|floatformat:0 }}{% else %}—{% endif %}</div><div style="color:var(--muted-foreground);font-size:.95rem;">{% if company %}Based on the latest saved market record.{% else %}Search to view saved market data.{% endif %}</div></div>
+      <div class="info-block score-card"><strong>Momentum score</strong><div class="score-value">{% if company.change_percent is not None %}{{ company.change_percent|floatformat:0 }}{% else %}-{% endif %}</div><div class="stat-helper">{% if company %}Based on the latest saved market record.{% else %}Search to view saved market data.{% endif %}</div></div>
     </div></section>
 
     <section class="grid grid-3">
       <article class="card"><div class="card-header"><h2 class="card-title">Price &amp; Change Summary</h2></div><div class="metric-grid">
-        <div class="metric"><div class="label">Change %</div><div class="value">{% if company.change_percent is not None %}{{ company.change_percent|floatformat:2 }}%{% else %}—{% endif %}</div><div class="helper">{% if company %}{{ company.pdf_document.report_date|date:"d-M-Y" }}{% endif %}</div></div>
-        <div class="metric"><div class="label">Change Value</div><div class="value">{% if company.change_value is not None %}{{ company.change_value|floatformat:2 }}{% else %}—{% endif %}</div><div class="helper">Price change</div></div>
-        <div class="metric"><div class="label">Latest Price</div><div class="value">{% if company.price is not None %}{{ company.price|floatformat:2 }}{% else %}—{% endif %}</div><div class="helper">Latest saved session</div></div>
-        <div class="metric"><div class="label">Saved Sessions</div><div class="value">{{ history|length }}</div><div class="helper">Available history</div></div>
+        <div class="metric"><div class="label">Change %</div><div class="value">{% if company.change_percent is not None %}{{ company.change_percent|floatformat:2 }}%{% else %}-{% endif %}</div><div class="helper">{% if company %}{{ company.pdf_document.report_date|date:"d-M-Y" }}{% endif %}</div></div>
+        <div class="metric"><div class="label">Change Value</div><div class="value">{% if company.change_value is not None %}{{ company.change_value|floatformat:2 }}{% else %}-{% endif %}</div><div class="helper">Price change</div></div>
+        <div class="metric"><div class="label">Latest Price</div><div class="value">{% if company.price is not None %}{{ company.price|floatformat:2 }}{% else %}-{% endif %}</div><div class="helper">Latest saved session</div></div>
+        <div class="metric"><div class="label">Saved Sessions</div><div class="value">{{ history_count }}</div><div class="helper">Available history</div></div>
       </div></article>
       <article class="card chart-card"><div class="card-header"><h2 class="card-title">Price History (Saved Sessions)</h2></div><div class="bar-chart">{% for point in chart_points %}<div class="bar" title="{{ point.label }}: {{ point.price }}"><div class="bar-track"><div class="bar-fill" style="height: {{ point.height }}%;"></div></div><span>{{ point.label }}</span></div>{% empty %}<div style="color:var(--muted-foreground);">No saved price history available.</div>{% endfor %}</div></article>
-      <article class="card"><div class="card-header"><h2 class="card-title">Company Quick Info</h2></div><div style="display:flex;flex-direction:column;gap:.65rem;color:var(--muted-foreground);font-size:.95rem;"><p>Latest saved date: {% if company %}{{ company.pdf_document.report_date|date:"d-M-Y" }}{% else %}—{% endif %}</p><p>Previous close: {% if previous_record %}{{ previous_record.price|floatformat:2 }}{% else %}—{% endif %}</p><p>Saved sessions: {{ history|length }}</p><p>Symbol: {% if company %}{{ company.symbol }}{% else %}—{% endif %}</p></div></article>
+      <article class="card"><div class="card-header"><h2 class="card-title">Company Quick Info</h2></div><div style="display:flex;flex-direction:column;gap:.65rem;color:var(--muted-foreground);font-size:.95rem;"><p>Latest saved date: {% if company %}{{ company.pdf_document.report_date|date:"d-M-Y" }}{% else %}-{% endif %}</p><p>Previous close: {% if previous_record %}{{ previous_record.price|floatformat:2 }}{% else %}-{% endif %}</p><p>Saved sessions: {{ history_count }}</p><p>Symbol: {% if company %}{{ company.symbol }}{% else %}-{% endif %}</p></div></article>
     </section>
 
     <section class="card table-card"><div class="card-header"><h2 class="card-title">Recent Performance</h2></div><table><thead><tr><th>Symbol</th><th>Company</th><th>Sector</th><th>Price</th><th>Change %</th><th>Volume</th><th>Trend</th><th>Action</th></tr></thead><tbody>
-      {% for record in history %}<tr><td><strong>{{ record.symbol }}</strong></td><td>{{ record.company_name }}</td><td>{{ record.sector|default:'-' }}</td><td>{% if record.price is not None %}{{ record.price|floatformat:2 }}{% else %}—{% endif %}</td><td class="badge {% if record.change_percent is not None and record.change_percent < 0 %}danger{% else %}success{% endif %}">{% if record.change_percent is not None %}{{ record.change_percent|floatformat:2 }}%{% else %}—{% endif %}</td><td>{% if record.volume is not None %}{{ record.volume }}{% else %}—{% endif %}</td><td><span class="badge {% if record.change_percent is not None and record.change_percent < 0 %}danger{% else %}success{% endif %}">{% if record.change_percent is not None and record.change_percent < 0 %}Down{% else %}Up{% endif %}</span></td><td>{{ record.pdf_document.report_date|date:"d-M-Y" }}</td></tr>{% empty %}<tr><td colspan="8" style="text-align:center;color:var(--muted-foreground);">No saved company records available.</td></tr>{% endfor %}
+      {% for record in history %}<tr><td><strong>{{ record.symbol }}</strong></td><td>{{ record.company_name }}</td><td>{{ record.sector|default:'-' }}</td><td>{% if record.price is not None %}{{ record.price|floatformat:2 }}{% else %}-{% endif %}</td><td><span class="badge {% if record.change_percent is not None and record.change_percent < 0 %}danger{% else %}success{% endif %}">{% if record.change_percent is not None %}{{ record.change_percent|floatformat:2 }}%{% else %}-{% endif %}</span></td><td title="{{ record.volume }}">{% if record.volume is not None %}{{ record.volume|compact_number }}{% else %}-{% endif %}</td><td><span class="badge {% if record.change_percent is not None and record.change_percent < 0 %}danger{% else %}success{% endif %}">{% if record.change_percent is not None and record.change_percent < 0 %}Down{% else %}Up{% endif %}</span></td><td>{{ record.pdf_document.report_date|date:"d-M-Y" }}</td></tr>{% empty %}<tr><td colspan="8" style="text-align:center;color:var(--muted-foreground);">No saved company records available.</td></tr>{% endfor %}
     </tbody></table>{% if history_paginator and history_paginator.num_pages > 1 %}<div class="card-header" style="margin-top:1rem;justify-content:center;"><nav aria-label="Pagination"><ul class="pagination" style="display:flex;gap:0.5rem;list-style:none;padding:0;margin:0;">{% if history_page_obj.has_previous %}<li><a class="outline-button" href="?page={{ history_page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}">Previous</a></li>{% endif %}{% for num in history_paginator.page_range %}<li><a class="outline-button pagination-link{% if num == history_page_obj.number %} active{% endif %}" href="?page={{ num }}{% if search_query %}&q={{ search_query }}{% endif %}{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}"{% if num == history_page_obj.number %} aria-current="page" style="background:#2563eb;color:#fff;border-color:#2563eb;"{% endif %}>{{ num }}</a></li>{% endfor %}{% if history_page_obj.has_next %}<li><a class="outline-button" href="?page={{ history_page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}">Next</a></li>{% endif %}</ul></nav></div>{% endif %}</section>
   </main>
-</div>
 {% endblock %}
+
+

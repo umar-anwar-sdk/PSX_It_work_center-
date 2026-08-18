@@ -9,18 +9,11 @@ function setTheme(theme) {
   localStorage.setItem('theme', theme);
 }
 
-if (mobileToggle) {
+if (mobileToggle && sidebar) {
   mobileToggle.addEventListener('click', () => {
     sidebar.classList.toggle('open');
   });
 }
-
-document.querySelectorAll('.nav-link').forEach((link) => {
-  link.addEventListener('click', () => {
-    document.querySelectorAll('.nav-link').forEach((item) => item.classList.remove('active'));
-    link.classList.add('active');
-  });
-});
 
 const storedTheme = localStorage.getItem('theme');
 if (storedTheme) {
@@ -63,7 +56,26 @@ document.querySelectorAll('.legend-pill').forEach((pill) => {
 });
 
 window.addEventListener('click', (event) => {
-  if (window.innerWidth < 1024 && sidebar.classList.contains('open') && !sidebar.contains(event.target) && !mobileToggle.contains(event.target)) {
+  if (sidebar && mobileToggle && window.innerWidth < 1024 && sidebar.classList.contains('open') && !sidebar.contains(event.target) && !mobileToggle.contains(event.target)) {
     sidebar.classList.remove('open');
   }
+});
+
+document.querySelectorAll('form').forEach((form) => {
+  form.addEventListener('submit', () => {
+    form.querySelectorAll('button[type="submit"]').forEach((button) => {
+      button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
+    });
+  });
+});
+
+document.querySelectorAll('[data-auto-submit]').forEach((control) => {
+  control.addEventListener('change', () => control.form?.requestSubmit());
+});
+
+document.querySelectorAll('[data-confirm]').forEach((control) => {
+  control.addEventListener('click', (event) => {
+    if (!window.confirm(control.dataset.confirm)) event.preventDefault();
+  });
 });

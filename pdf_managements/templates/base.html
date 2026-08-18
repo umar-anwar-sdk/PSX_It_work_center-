@@ -1,55 +1,51 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Company Analysis</title>
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}PSX Daily Market{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+  {% block extra_head %}{% endblock %}
 </head>
-
 <body>
-    <div class="app-shell">
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="sidebar-logo" aria-hidden="true">
-                    <svg viewBox="0 0 32 32" width="28" height="28" fill="currentColor">
-                        <path d="M5 24V12h4v12H5Zm6 0V7h4v17h-4Zm6 0V4h4v20h-4Zm6 0V10h4v14h-4Z" />
-                        <path d="M4 26h24" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                    </svg>
-                </div>
-                <div class="sidebar-brand">
-                    <strong>PSX Daily Market</strong>
-                    <span>Intelligence Engine</span>
-                </div>
-            </div>
-            <nav class="nav-list" aria-label="Primary navigation">
-                <a class="nav-link" href="{% url 'home' %}">Dashboard</a>
-                <a class="nav-link" href="{% url 'pdf-management' %}">PDF Management</a>
-                <a class="nav-link" href="{% url 'daily-market-explorer' %}">Daily Market Explorer</a>
-                <a class="nav-link active" href="{% url 'company-analysis' %}">Company Analysis</a>
-                <a class="nav-link" href="{% url 'market-comparison' %}">Market Comparison</a>
-                <a class="nav-link" href="{% url 'market-analytics' %}">Market Analytics</a>
-                <a class="nav-link" href="{% url 'reports' %}">Reports</a>
-                <a class="nav-link" href="{% url 'watchlist' %}">Watchlist</a>
-                <a class="nav-link" href="{% url 'search-screener' %}">Search &amp; Screener</a>
-                <a class="nav-link" href="{% url 'settings' %}">Settings</a>
-            </nav>
-            <div class="sidebar-footer">
-                <div class="help-card">...</div>
-            </div>
-        </aside>
-        <div class="main-content">
-            {% block content %}
-
-            
-            {% endblock %}
-
+  <div class="app-shell">
+    {% if user.is_authenticated %}
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo" aria-hidden="true"><svg viewBox="0 0 32 32" width="28" height="28" fill="currentColor"><path d="M5 24V12h4v12H5Zm6 0V7h4v17h-4Zm6 0V4h4v20h-4Zm6 0V10h4v14h-4Z"/><path d="M4 26h24" stroke="currentColor" stroke-width="2"/></svg></div>
+        <div class="sidebar-brand"><strong>PSX Market</strong><span>Intelligence OS</span></div>
+      </div>
+      <nav class="nav-list" aria-label="Primary navigation">
+        <span class="nav-kicker">Workspace</span>
+        {% with current=request.resolver_match.url_name %}
+        {% if 'dashboard' in allowed_modules %}<a class="nav-link{% if current == 'home' %} active{% endif %}" href="{% url 'home' %}"><span class="nav-mark">D</span><span>Dashboard</span></a>{% endif %}
+        {% if 'pdf_management' in allowed_modules %}<a class="nav-link{% if current == 'pdf-management' or current == 'extracted-data' %} active{% endif %}" href="{% url 'pdf-management' %}"><span class="nav-mark">P</span><span>PDF Management</span></a>{% endif %}
+        {% if 'daily_market_explorer' in allowed_modules %}<a class="nav-link{% if current == 'daily-market-explorer' %} active{% endif %}" href="{% url 'daily-market-explorer' %}"><span class="nav-mark">E</span><span>Market Explorer</span></a>{% endif %}
+        {% if 'company_analysis' in allowed_modules %}<a class="nav-link{% if current == 'company-analysis' %} active{% endif %}" href="{% url 'company-analysis' %}"><span class="nav-mark">C</span><span>Company Analysis</span></a>{% endif %}
+        {% if 'market_comparison' in allowed_modules %}<a class="nav-link{% if current == 'market-comparison' %} active{% endif %}" href="{% url 'market-comparison' %}"><span class="nav-mark">M</span><span>Market Comparison</span></a>{% endif %}
+        {% if 'market_analytics' in allowed_modules %}<a class="nav-link{% if current == 'market-analytics' %} active{% endif %}" href="{% url 'market-analytics' %}"><span class="nav-mark">A</span><span>Market Analytics</span></a>{% endif %}
+        {% if 'reports' in allowed_modules %}<a class="nav-link{% if current == 'reports' %} active{% endif %}" href="{% url 'reports' %}"><span class="nav-mark">R</span><span>Reports</span></a>{% endif %}
+        {% if 'watchlist' in allowed_modules %}<a class="nav-link{% if current == 'watchlist' %} active{% endif %}" href="{% url 'watchlist' %}"><span class="nav-mark">W</span><span>Watchlist</span></a>{% endif %}
+        {% if 'search_screener' in allowed_modules %}<a class="nav-link{% if current == 'search-screener' %} active{% endif %}" href="{% url 'search-screener' %}"><span class="nav-mark">S</span><span>Search &amp; Screener</span></a>{% endif %}
+        {% if 'settings_profile' in allowed_modules %}<a class="nav-link{% if current == 'settings' or current == 'client-company-detail' %} active{% endif %}" href="{% url 'settings' %}"><span class="nav-mark">G</span><span>Settings</span></a>{% endif %}
+        {% endwith %}
+      </nav>
+      <div class="sidebar-footer">
+        <div class="help-card">
+          <span class="user-avatar">{{ user.username|slice:":1"|upper }}</span>
+          <div class="user-copy"><strong>{{ current_client_company.company_name|default:user.get_full_name|default:user.username }}</strong><span>{% if user.is_staff %}Administrator{% else %}Company account{% endif %}</span></div>
+          <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="logout-button" type="submit" aria-label="Logout" title="Logout">&#8594;</button></form>
         </div>
-
-        <script src="{% static 'js/main.js' %}"></script>
+      </div>
+    </aside>
+    {% endif %}
+    <div class="main-area{% if not user.is_authenticated %} auth-main{% endif %}">
+      {% if messages %}<div class="message-stack" aria-live="polite">{% for message in messages %}<div class="app-message {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+  <script src="{% static 'js/main.js' %}"></script>
+  {% block scripts %}{% endblock %}
 </body>
-
-
 </html>

@@ -1,100 +1,38 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Search & Screener</title>
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
-  </head>
-  <body>
-    <div class="app-shell">
-      <aside class="sidebar">
-        <div class="sidebar-header">
-          <div class="sidebar-logo" aria-hidden="true">
-            <svg viewBox="0 0 32 32" width="28" height="28" fill="currentColor">
-              <path d="M5 24V12h4v12H5Zm6 0V7h4v17h-4Zm6 0V4h4v20h-4Zm6 0V10h4v14h-4Z" />
-              <path d="M4 26h24" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-            </svg>
-          </div>
-          <div class="sidebar-brand">
-            <strong>PSX Daily Market</strong>
-            <span>Intelligence Engine</span>
-          </div>
-        </div>
-        <nav class="nav-list" aria-label="Primary navigation">
-          <a class="nav-link" href="{% url 'home' %}">Dashboard</a>
-          <a class="nav-link" href="{% url 'pdf-management' %}">PDF Management</a>
-          <a class="nav-link" href="{% url 'daily-market-explorer' %}">Daily Market Explorer</a>
-          <a class="nav-link" href="{% url 'company-analysis' %}">Company Analysis</a>
-          <a class="nav-link" href="{% url 'market-comparison' %}">Market Comparison</a>
-          <a class="nav-link" href="{% url 'market-analytics' %}">Market Analytics</a>
-          <a class="nav-link" href="{% url 'reports' %}">Reports</a>
-          <a class="nav-link" href="{% url 'watchlist' %}">Watchlist</a>
-          <a class="nav-link active" href="{% url 'search-screener' %}">Search &amp; Screener</a>
-          <a class="nav-link" href="{% url 'settings' %}">Settings</a>
-        </nav>
-        <div class="sidebar-footer"><div class="help-card">...</div></div>
-      </aside>
-      <div class="main-area">
+{% extends 'base.html' %}
+{% block title %}Search & Screener{% endblock %}
+{% block content %}
         <header class="topbar">
-          <button class="icon-button mobile-menu" data-mobile-menu>☰</button>
+          <button class="icon-button mobile-menu" data-mobile-menu>&#9776;</button>
           <div>
             <h1>Search &amp; Screener</h1>
             <p>Find stocks using advanced filters and create custom screens</p>
           </div>
-          <div class="topbar-actions"><button class="outline-button">09-Jul-2026</button><button class="icon-button" data-theme-toggle>☀</button></div>
-          <style>.topbar-actions > button.outline-button { display:none; }</style>
-          <form method="get" class="topbar-actions"><input type="hidden" name="q" value="{{ filters.q }}" /><input type="hidden" name="sector" value="{{ filters.sector }}" /><input type="hidden" name="price" value="{{ filters.price }}" /><input type="hidden" name="change_percent" value="{{ filters.change_percent }}" /><input type="hidden" name="volume" value="{{ filters.volume }}" /><input class="outline-button" type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}" onchange="this.form.submit()" aria-label="Select report date" /></form>
+          <form method="get" class="topbar-actions"><input type="hidden" name="q" value="{{ filters.q }}" /><input type="hidden" name="sector" value="{{ filters.sector }}" /><input class="outline-button" type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}" data-auto-submit aria-label="Select report date" /><button class="icon-button" type="button" data-theme-toggle>&#9728;</button></form>
         </header>
         <main class="content">
-          <div class="grid" style="grid-template-columns:1fr 320px;align-items:start;">
+          {% if invalid_date %}<section class="card"><p class="danger-text">The requested report date is invalid. No market data was selected.</p></section>{% endif %}
+          <div class="grid" style="grid-template-columns:1fr;align-items:start;">
             <div class="content" style="padding:0;gap:1rem;">
               <form class="card" method="get">
-                <div class="card-header"><h2 class="card-title">Advanced Filters</h2><div class="section-row"><button class="outline-button">↺ Reset</button><button class="button">🔎 Search</button></div></div>
+                <div class="card-header"><h2 class="card-title">Advanced Filters</h2><div class="section-row"><a class="outline-button" href="{% url 'search-screener' %}">Reset</a><button class="button" type="submit">Search</button></div></div>
                 <div class="form-grid">
                   <label>Symbol / Company<input class="input" name="q" value="{{ filters.q }}" placeholder="Search..." /></label>
                   <label>Sector<input class="input" name="sector" value="{{ filters.sector }}" placeholder="Any" /></label>
-                  <label>Market<input class="input" placeholder="Any" /></label>
-                  <label>Price (PKR)<input class="input" name="price" value="{{ filters.price }}" placeholder="Any" /></label>
-                  <label>Change %<input class="input" name="change_percent" value="{{ filters.change_percent }}" placeholder="Any" /></label>
-                  <label>Volume<input class="input" name="volume" value="{{ filters.volume }}" placeholder="Any" /></label>
-                  <label>Value (PKR)<input class="input" placeholder="Any" /></label>
-                  <label>Rank<input class="input" placeholder="Any" /></label>
-                  <label>Momentum Score<input class="input" placeholder="Any" /></label>
-                  <label>P/E Ratio<input class="input" placeholder="Any" /></label>
-                  <label>P/B Ratio<input class="input" placeholder="Any" /></label>
-                  <label>ROE (%)<input class="input" placeholder="Any" /></label>
-                  <label style="grid-column:span 2;">Date Range<input class="input" value="02-Jul-2026  ->  09-Jul-2026" /></label>
+                  <label>Minimum Price<input class="input" type="number" step="0.01" name="min_price" value="{{ filters.min_price }}" placeholder="Any" /></label>
+                  <label>Maximum Price<input class="input" type="number" step="0.01" name="max_price" value="{{ filters.max_price }}" placeholder="Any" /></label>
+                  <label>Minimum Change %<input class="input" type="number" step="0.01" name="min_change" value="{{ filters.min_change }}" placeholder="Any" /></label>
+                  <label>Maximum Change %<input class="input" type="number" step="0.01" name="max_change" value="{{ filters.max_change }}" placeholder="Any" /></label>
+                  <label>Minimum Volume<input class="input" type="number" min="0" name="min_volume" value="{{ filters.min_volume }}" placeholder="Any" /></label>
                 </div>
               </form>
               <section class="card table-card">
                 <div class="card-header"><h2 class="card-title">{{ result_count }} Search Results</h2></div>
-                <table><thead><tr><th>Symbol</th><th>Company</th><th>Sector</th><th>Price</th><th>Change %</th><th>Volume</th><th>Trend</th></tr></thead><tbody>{% for record in records %}<tr><td><strong>{{ record.symbol }}</strong></td><td>{{ record.company_name }}</td><td>{{ record.sector|default:'-' }}</td><td>{% if record.price is not None %}{{ record.price|floatformat:2 }}{% else %}-{% endif %}</td><td class="badge {% if record.change_percent is not None and record.change_percent < 0 %}danger{% else %}success{% endif %}">{% if record.change_percent is not None and record.change_percent > 0 %}+{% endif %}{{ record.change_percent|default:'-' }}{% if record.change_percent is not None %}%{% endif %}</td><td>{{ record.volume|default:'-' }}</td><td><span class="badge {% if record.change_percent is not None and record.change_percent < 0 %}danger{% else %}success{% endif %}">{% if record.change_percent is not None and record.change_percent < 0 %}Down{% else %}Up{% endif %}</span></td></tr>{% empty %}<tr><td colspan="7" style="text-align:center;color:var(--muted-foreground);">No matching stocks found.</td></tr>{% endfor %}</tbody></table>
-                {% if paginator.num_pages > 1 %}<div class="card-header" style="margin-top:1rem;justify-content:center;"><nav aria-label="Pagination"><ul class="pagination" style="display:flex;gap:0.5rem;list-style:none;padding:0;margin:0;">{% if page_obj.has_previous %}<li><a class="outline-button" href="?page={{ page_obj.previous_page_number }}{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}{% if filters.q %}&q={{ filters.q|urlencode }}{% endif %}{% if filters.sector %}&sector={{ filters.sector|urlencode }}{% endif %}{% if filters.price %}&price={{ filters.price|urlencode }}{% endif %}{% if filters.change_percent %}&change_percent={{ filters.change_percent|urlencode }}{% endif %}{% if filters.volume %}&volume={{ filters.volume|urlencode }}{% endif %}">Previous</a></li>{% endif %}{% for num in paginator.page_range %}<li><a class="outline-button pagination-link{% if num == page_obj.number %} active{% endif %}" href="?page={{ num }}{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}{% if filters.q %}&q={{ filters.q|urlencode }}{% endif %}{% if filters.sector %}&sector={{ filters.sector|urlencode }}{% endif %}{% if filters.price %}&price={{ filters.price|urlencode }}{% endif %}{% if filters.change_percent %}&change_percent={{ filters.change_percent|urlencode }}{% endif %}{% if filters.volume %}&volume={{ filters.volume|urlencode }}{% endif %}"{% if num == page_obj.number %} aria-current="page" style="background:#2563eb;color:#fff;border-color:#2563eb;"{% endif %}>{{ num }}</a></li>{% endfor %}{% if page_obj.has_next %}<li><a class="outline-button" href="?page={{ page_obj.next_page_number }}{% if selected_date %}&date={{ selected_date|date:'Y-m-d' }}{% endif %}{% if filters.q %}&q={{ filters.q|urlencode }}{% endif %}{% if filters.sector %}&sector={{ filters.sector|urlencode }}{% endif %}{% if filters.price %}&price={{ filters.price|urlencode }}{% endif %}{% if filters.change_percent %}&change_percent={{ filters.change_percent|urlencode }}{% endif %}{% if filters.volume %}&volume={{ filters.volume|urlencode }}{% endif %}">Next</a></li>{% endif %}</ul></nav></div>{% endif %}
+                <table><thead><tr><th>Symbol</th><th>Company</th><th>Sector</th><th>Price</th><th>Change %</th><th>Volume</th><th>Trend</th></tr></thead><tbody>{% for record in records %}<tr><td><strong>{{ record.symbol }}</strong></td><td>{{ record.company_name }}</td><td>{{ record.sector|default:'-' }}</td><td>{% if record.price is not None %}{{ record.price|floatformat:2 }}{% else %}-{% endif %}</td><td><span class="badge {% if record.change_percent is not None and record.change_percent < 0 %}danger{% else %}success{% endif %}">{% if record.change_percent is not None and record.change_percent > 0 %}+{% endif %}{{ record.change_percent|default:'-' }}{% if record.change_percent is not None %}%{% endif %}</span></td><td title="{{ record.volume|default:'-' }}">{{ record.volume|compact_number }}</td><td><span class="badge {% if record.change_percent is not None and record.change_percent < 0 %}danger{% else %}success{% endif %}">{% if record.change_percent is not None and record.change_percent < 0 %}Down{% else %}Up{% endif %}</span></td></tr>{% empty %}<tr><td colspan="7" style="text-align:center;color:var(--muted-foreground);">No matching stocks found.</td></tr>{% endfor %}</tbody></table>
+                {% if paginator.num_pages > 1 %}<div class="card-header" style="margin-top:1rem;justify-content:center;"><nav class="section-row" aria-label="Pagination">{% if page_obj.has_previous %}<a class="outline-button" href="?{{ filter_querystring }}&page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}<span>Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>{% if page_obj.has_next %}<a class="outline-button" href="?{{ filter_querystring }}&page={{ page_obj.next_page_number }}">Next</a>{% endif %}</nav></div>{% endif %}
               </section>
             </div>
-            <aside class="content" style="padding:0;gap:1rem;">
-              <section class="card">
-                <div class="card-header"><h2 class="card-title">Saved Screens</h2><button class="ghost-button">View All</button></div>
-                <div class="list-stack">
-                  <div class="card" style="padding:.75rem;box-shadow:none;background:var(--card);"><strong>High Momentum Stocks</strong><div class="rank-meta">128 stocks - 09-Jul-2026</div></div>
-                  <div class="card" style="padding:.75rem;box-shadow:none;background:var(--card);"><strong>Low P/E High Dividend</strong><div class="rank-meta">128 stocks - 09-Jul-2026</div></div>
-                  <div class="card" style="padding:.75rem;box-shadow:none;background:var(--card);"><strong>High Volume Breakout</strong><div class="rank-meta">128 stocks - 09-Jul-2026</div></div>
-                  <button class="outline-button" style="width:100%;">Save Current Screen</button>
-                </div>
-              </section>
-              <section class="card">
-                <div class="card-header"><h2 class="card-title">Filter Summary</h2></div>
-                <div class="section-row">
-                  <span class="badge primary">Date Range</span><span class="badge primary">Change %</span><span class="badge primary">Volume</span><span class="badge primary">Momentum Score</span><span class="badge primary">Trend</span>
-                </div>
-              </section>
-            </aside>
           </div>
         </main>
-      </div>
-    </div>
-    <script src="{% static 'js/main.js' %}"></script>
-  </body>
-</html>
+      {% endblock %}
+
+

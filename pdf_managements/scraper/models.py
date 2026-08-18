@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -16,6 +17,13 @@ class PDFDocument(models.Model):
 
     class Meta:
         indexes = [models.Index(fields=["report_date", "report_time"])]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["file_hash"],
+                condition=models.Q(file_hash__isnull=False) & ~models.Q(file_hash=""),
+                name="unique_nonempty_pdf_file_hash",
+            ),
+        ]
 
     def __str__(self):
         return self.name
@@ -33,11 +41,22 @@ class ExtractedCompanyRecord(models.Model):
     price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     change_value = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     change_percent = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    volume = models.PositiveIntegerField(null=True, blank=True)
+    volume = models.PositiveBigIntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["company_name"]
+        indexes = [
+            models.Index(fields=["symbol"]),
+            models.Index(fields=["sector"]),
+            models.Index(fields=["pdf_document", "symbol"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["pdf_document", "symbol"],
+                name="unique_pdf_company_symbol",
+            ),
+        ]
 
     def __str__(self):
         return self.company_name
@@ -75,6 +94,14 @@ class ComparisonResult(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["current_pdf", "symbol"],
+                name="unique_comparison_current_pdf_symbol",
+            ),
+        ]
+
     def __str__(self):
         return f"{self.symbol} - {self.status}"
 
@@ -92,6 +119,13 @@ class GeneratedReport(models.Model):
     date_from = models.DateField()
     date_to = models.DateField()
     file = models.FileField(upload_to="reports/")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="generated_market_reports",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

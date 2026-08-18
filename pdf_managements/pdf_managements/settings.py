@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -20,13 +22,39 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-idv$n8d-+m#_lvvke!_!b+jozz7-99oc3@2$v9u1ymk-(htw89'
+def env_bool(name, default=False):
+    return os.getenv(name, str(default)).lower() in {"1", "true", "yes", "on"}
 
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+# DEBUG = env_bool("DJANGO_DEBUG", True)
+PRODUCTION = True
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-local-development-only-change-me")
+# if PRODUCTION and not os.getenv("DJANGO_SECRET_KEY"):
+#     raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is false.")
+# SECRET_KEY_FALLBACKS = [
+#     value.strip()
+#     for value in os.getenv("DJANGO_SECRET_KEY_FALLBACKS", "").split(",")
+#     if value.strip()
+# ]
 
-ALLOWED_HOSTS = []
+# azure_hostname = os.getenv("WEBSITE_HOSTNAME", "")
+# configured_hosts = os.getenv("DJANGO_ALLOWED_HOSTS", "")
+# if PRODUCTION and not (configured_hosts or azure_hostname):
+#     raise ImproperlyConfigured("DJANGO_ALLOWED_HOSTS must be set in production.")
+# ALLOWED_HOSTS = [
+#     host.strip()
+#     for host in (configured_hosts or f"localhost,127.0.0.1,testserver,{azure_hostname}").split(",")
+#     if host.strip()
+# ]
+ALLOWED_HOSTS = ["*"]
+# if PRODUCTION and "*" in ALLOWED_HOSTS:
+#     raise ImproperlyConfigured("Wildcard ALLOWED_HOSTS is not permitted in production.")
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
+]
 
 
 # Application definition
@@ -38,18 +66,22 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'axes',
     'pdfs',
     'scraper',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'axes.middleware.AxesMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'pdfs.middleware.SecurityHeadersMiddleware',
 ]
 
 ROOT_URLCONF = 'pdf_managements.urls'
@@ -64,7 +96,9 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'pdfs.context_processors.navigation_permissions',
             ],
+            'builtins': ['pdfs.templatetags.market_tags'],
         },
     },
 ]
@@ -75,12 +109,27 @@ WSGI_APPLICATION = 'pdf_managements.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+if DATABASE_URL:
+    try:
+        import dj_database_url
+    except Exception as exc:
+        raise ImproperlyConfigured(
+            "DATABASE_URL is set but the 'dj-database-url' package is not installed: %s" % exc
+        )
+
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=int(os.getenv("DJANGO_DB_CONN_MAX_AGE", "60")),
+            conn_health_checks=True,
+            # ssl_require=env_bool("DJANGO_DB_SSL_REQUIRED", PRODUCTION),
+        )
     }
-}
+# elif PRODUCTION and not env_bool("DJANGO_ALLOW_SQLITE_IN_PRODUCTION", False):
+#     raise ImproperlyConfigured("DATABASE_URL must point to PostgreSQL in production.")
+else:
+    DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}}
 
 
 # Password validation
@@ -92,6 +141,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {'min_length': 12},
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
@@ -100,6 +150,22 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+]
+
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+AXES_FAILURE_LIMIT = int(os.getenv("DJANGO_LOGIN_FAILURE_LIMIT", "5"))
+AXES_COOLOFF_TIME = int(os.getenv("DJANGO_LOGIN_COOLOFF_HOURS", "1"))
+AXES_RESET_ON_SUCCESS = True
+AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
+AXES_VERBOSE = False
 
 
 # Internationalization
@@ -123,13 +189,90 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = Path(os.getenv("DJANGO_MEDIA_ROOT", str(BASE_DIR / "media")))
+SERVE_MEDIA = env_bool("DJANGO_SERVE_MEDIA", DEBUG)
+
+REDIS_URL = os.getenv("REDIS_URL", "")
+if REDIS_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": REDIS_URL,
+            "TIMEOUT": 300,
+        }
+    }
+else:
+    CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+
+PDF_UPLOAD_MAX_BYTES = int(os.getenv("PDF_UPLOAD_MAX_BYTES", str(15 * 1024 * 1024)))
+PDF_UPLOAD_MAX_PAGES = int(os.getenv("PDF_UPLOAD_MAX_PAGES", "500"))
+
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_AGE = int(os.getenv("DJANGO_SESSION_COOKIE_AGE", str(8 * 60 * 60)))
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_SAVE_EVERY_REQUEST = True
+
+# if PRODUCTION:
+#     if env_bool("DJANGO_TRUST_PROXY_HEADERS", bool(azure_hostname)):
+#         SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+#         USE_X_FORWARDED_HOST = True
+#     SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", True)
+#     SESSION_COOKIE_SECURE = True
+#     CSRF_COOKIE_SECURE = True
+#     SECURE_CONTENT_TYPE_NOSNIFF = True
+#     SECURE_HSTS_SECONDS = int(os.getenv("DJANGO_HSTS_SECONDS", "300"))
+#     SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("DJANGO_HSTS_INCLUDE_SUBDOMAINS", False)
+#     SECURE_HSTS_PRELOAD = env_bool("DJANGO_HSTS_PRELOAD", False)
+#     SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+#     SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
+#     X_FRAME_OPTIONS = "DENY"
 
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "home"
+LOGOUT_REDIRECT_URL = "login"
+
+EMAIL_BACKEND = os.getenv(
+    "DJANGO_EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend",
+)
+EMAIL_HOST = os.getenv("DJANGO_EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.getenv("DJANGO_EMAIL_PORT", "25"))
+EMAIL_HOST_USER = os.getenv("DJANGO_EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("DJANGO_EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env_bool("DJANGO_EMAIL_USE_TLS", False)
+DEFAULT_FROM_EMAIL = os.getenv("DJANGO_DEFAULT_FROM_EMAIL", "alerts@psx-market.local")
+SERVER_EMAIL = os.getenv("DJANGO_SERVER_EMAIL", DEFAULT_FROM_EMAIL)
+EMAIL_TIMEOUT = int(os.getenv("DJANGO_EMAIL_TIMEOUT", "10"))
+
+LOG_LEVEL = os.getenv("DJANGO_LOG_LEVEL", "INFO").upper()
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "standard": {"format": "{asctime} {levelname} {name} {message}", "style": "{"},
+    },
+    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "standard"}},
+    "root": {"handlers": ["console"], "level": LOG_LEVEL},
+    "loggers": {
+        "django.security": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "axes": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+    },
+}

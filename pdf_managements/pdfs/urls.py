@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     company_analysis,
+    client_company_detail,
     daily_market_explorer,
     download_report,
     home,
@@ -19,6 +20,7 @@ from .views import (
 urlpatterns = [
     path("", home, name="home"),
     path("pages/company-analysis/", company_analysis, name="company-analysis"),
+    path("pages/settings/companies/<int:pk>/", client_company_detail, name="client-company-detail"),
     path("pages/daily-market-explorer/", daily_market_explorer, name="daily-market-explorer"),
     path("pages/market-analytics/", market_analysis, name="market-analytics"),
     path("pages/market-comparison/", market_comparison, name="market-comparison"),

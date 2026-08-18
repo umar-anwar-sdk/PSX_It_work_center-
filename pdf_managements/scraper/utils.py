@@ -4,9 +4,9 @@ import re
 from difflib import SequenceMatcher
 from datetime import datetime
 from decimal import Decimal
-from pathlib import Path
 
 import pdfplumber
+from django.db import transaction
 from django.utils import timezone
 
 from .models import (
@@ -72,7 +72,7 @@ def extract_pdf_text(pdf_path):
                 if extracted_text:
                     text_parts.append(extracted_text)
                     logger.info("Extracted page %s from PDF", page_number)
-    except Exception as exc:
+    except Exception:
         logger.exception("PDF text extraction failed for %s", pdf_path)
         raise
 
@@ -127,7 +127,7 @@ def _parse_pdf_table(pdf_path):
                     if row_top - 3 <= float(word["top"]) < next_top - 1
                 ]
 
-                def cell(left, right):
+                def cell(left, right, row_words=row_words):
                     selected = [
                         word for word in row_words
                         if left <= float(word["x0"]) < right
@@ -233,7 +233,7 @@ def extract_report_datetime(pdf_path):
     if date_match:
         for date_format in ["%d-%b-%Y", "%d/%m/%Y", "%Y-%m-%d"]:
             try:
-                report_date = datetime.strptime(date_match.group(1), date_format).date()
+                report_date = datetime.strptime(date_match.group(1), date_format).date()  # noqa: DTZ007
                 break
             except ValueError:
                 continue
@@ -241,7 +241,7 @@ def extract_report_datetime(pdf_path):
     if time_match:
         for time_format in ["%H:%M:%S", "%H:%M", "%I:%M %p"]:
             try:
-                report_time = datetime.strptime(time_match.group(1), time_format).time()
+                report_time = datetime.strptime(time_match.group(1), time_format).time()  # noqa: DTZ007
                 break
             except ValueError:
                 continue
@@ -324,8 +324,6 @@ def parse_pdf_text(text):
         change_text = parts[-4]
         change_percent_text = parts[-3]
         volume_text = parts[-2]
-        trend = parts[-1]
-
         prefix_tokens = parts[1:-5]
         company_name, sector = _split_company_and_sector(prefix_tokens)
 
@@ -349,7 +347,7 @@ def parse_pdf_text(text):
                     "volume": int(cleaned_volume),
                 }
             )
-        except Exception:
+        except (ArithmeticError, ValueError):
             continue
 
     logger.info("Parsed %s company rows from PDF text", len(records))
@@ -372,15 +370,20 @@ def extract_company_information(pdf_path):
 
 def get_file_hash(file):
     hasher = hashlib.sha256()
-    if hasattr(file, "seek"):
-        file.seek(0)
-    if hasattr(file, "chunks"):
-        for chunk in file.chunks():
-            hasher.update(chunk)
-    else:
-        hasher.update(str(file).encode("utf-8"))
-    if hasattr(file, "seek"):
-        file.seek(0)
+    was_closed = getattr(file, "closed", False)
+    try:
+        if hasattr(file, "seek"):
+            file.seek(0)
+        if hasattr(file, "chunks"):
+            for chunk in file.chunks():
+                hasher.update(chunk)
+        else:
+            hasher.update(str(file).encode("utf-8"))
+        if hasattr(file, "seek"):
+            file.seek(0)
+    finally:
+        if was_closed and hasattr(file, "close"):
+            file.close()
     return hasher.hexdigest()
 
 
@@ -388,7 +391,15 @@ def save_extracted_data(pdf_document, records):
     logger.info("Saving %s extracted records for PDF %s", len(records), pdf_document.name)
     pdf_document.extracted_companies.all().delete()
 
+    unique_records = {}
     for record in records:
+        symbol = (record.get("symbol") or "").strip().upper()
+        company_name = (record.get("company_name") or "").strip()
+        if not symbol or not company_name:
+            continue
+        unique_records[symbol] = {**record, "symbol": symbol, "company_name": company_name}
+
+    for record in unique_records.values():
         ExtractedCompanyRecord.objects.create(
             pdf_document=pdf_document,
             company_name=record.get("company_name", ""),
@@ -413,18 +424,33 @@ def process_pdf_document(pdf_document):
 
     records = extract_company_information(file_path)
     logger.info("Parsed %s records", len(records))
+    if not records:
+        raise ValueError("No valid market records were found in this PDF.")
+    if report_date is None:
+        raise ValueError("The market report date could not be read from this PDF.")
 
-    pdf_document.report_date = report_date
-    pdf_document.report_time = report_time
-    if not pdf_document.file_hash:
-        pdf_document.file_hash = get_file_hash(pdf_document.file)
-    pdf_document.is_processed = True
-    pdf_document.processing_error = ""
-    pdf_document.processed_at = timezone.now()
-    pdf_document.save()
-    logger.info("Saved PDF metadata for: %s", pdf_document.name)
-    save_extracted_data(pdf_document, records)
-    compare_with_previous_pdf(pdf_document)
+    # Persist extraction, comparison and processed state as one unit. A failure
+    # must never leave a PDF marked processed with incomplete market records.
+    with transaction.atomic():
+        locked_document = PDFDocument.objects.select_for_update().get(pk=pdf_document.pk)
+        locked_document.report_date = report_date
+        locked_document.report_time = report_time
+        if not locked_document.file_hash:
+            locked_document.file_hash = get_file_hash(locked_document.file)
+        locked_document.processing_error = ""
+        locked_document.processed_at = timezone.now()
+        save_extracted_data(locked_document, records)
+        compare_with_previous_pdf(locked_document)
+        locked_document.is_processed = True
+        locked_document.save()
+        pdf_document = locked_document
+    logger.info("Saved PDF metadata and extracted records for document_id=%s", pdf_document.pk)
+    try:
+        from pdfs.services import dispatch_market_alerts
+
+        dispatch_market_alerts(pdf_document)
+    except Exception:
+        logger.exception("Market alert dispatch failed after processing PDF %s", pdf_document.pk)
     return records
 
 
